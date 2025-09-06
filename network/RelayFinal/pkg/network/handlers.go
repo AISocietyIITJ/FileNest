@@ -11,9 +11,16 @@ func FindValueHandler(params map[string]any) []byte {
 	log.Printf("params recv to FindValue is: %+v", params)
 	// add functionality for checking all params here
 
+	// pseudocode
+	// check if the targetnodeid is the same as the current nodeid
+	// if yes then find from database and give the new values
+	// else find the new values from the routing table
+
+	
+
 	reqJson, err := json.Marshal(params)
 	if(err != nil){
-		log.Printf("Error while marshalling in PingHandler: %+v", err.Error())
+		log.Printf("Error while marshalling in FindValueHandler: %+v", err.Error())
 	}
 	return reqJson
 }

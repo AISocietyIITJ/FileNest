@@ -39,11 +39,11 @@ func ParseBootstrapFlags(nodeidHex, pid string) ([]IDs, error) {
 	return ids, nil
 }
 
-func BuildKademliaFindValueRequest(handler *integration.ComprehensiveKademliaHandler, nodeidBytes []byte, embedding []float64) (map[string]interface{}, string) {
+func BuildKademliaFindValueRequest(handler *integration.ComprehensiveKademliaHandler, nodeidBytes []byte, embedding []float64, depth int) (map[string]interface{}, string) {
 	inputMessage := genmodels.Message{
 		Type:       "find_value",
 		QueryEmbed: embedding,
-		Depth:      1,
+		Depth:      depth,
 		IsProcessed: false,
 		Found:       false,
 	}
@@ -59,7 +59,7 @@ func BuildKademliaFindValueRequest(handler *integration.ComprehensiveKademliaHan
 	outputMessage := genmodels.Message{
 		Type:         inputMessage.Type,
 		QueryEmbed:   inputMessage.QueryEmbed,
-		Depth:        inputMessage.Depth + 1,
+		Depth:        inputMessage.Depth,
 		IsProcessed:  err == nil,
 		Found:        false,
 	}
@@ -81,14 +81,14 @@ func BuildKademliaFindValueRequest(handler *integration.ComprehensiveKademliaHan
 		"output_message": outputMessage,
 		"kademlia_used":  true,
 		"timestamp":      time.Now().Unix(),
-	}, "kademlia_search"
+	}, "find_value"
 }
 
-func BuildKademliaStoreRequest(handler *integration.ComprehensiveKademliaHandler, nodeidBytes []byte, embedding []float64) (map[string]interface{}, string) {
+func BuildKademliaStoreRequest(handler *integration.ComprehensiveKademliaHandler, nodeidBytes []byte, embedding []float64, depth int) (map[string]interface{}, string) {
 	inputMessage := genmodels.Message{
 		Type:       "store",
 		QueryEmbed: embedding,
-		Depth:      1,
+		Depth:      depth,
 		FileMetadata: genmodels.FileMetadata{
 			Name:         "query_document.pdf",
 			CreatedAt:    time.Now().Format(time.RFC3339),
@@ -111,7 +111,7 @@ func BuildKademliaStoreRequest(handler *integration.ComprehensiveKademliaHandler
 	outputMessage := genmodels.Message{
 		Type:         inputMessage.Type,
 		QueryEmbed:   inputMessage.QueryEmbed,
-		Depth:        inputMessage.Depth + 1,
+		Depth:        inputMessage.Depth,
 		FileMetadata: inputMessage.FileMetadata,
 		IsProcessed:  err == nil,
 		Found:        false,
@@ -134,5 +134,5 @@ func BuildKademliaStoreRequest(handler *integration.ComprehensiveKademliaHandler
 		"output_message": outputMessage,
 		"kademlia_used":  true,
 		"timestamp":      time.Now().Unix(),
-	}, "kademlia_search"
+	}, "store"
 }

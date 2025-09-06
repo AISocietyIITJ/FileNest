@@ -102,12 +102,14 @@ func main() {
 
 	// ---- Handle CLI Actions ----
 	if *findval {
-		handleFindValue(p, ctx, kademliaHandler, SourceNodeID)
+		handleFindValueUser(p, ctx, kademliaHandler, SourceNodeID)
 	}
 
 	if *store {
-		handleStore(p, ctx, kademliaHandler, SourceNodeID)
+		handleStoreUser(p, ctx, kademliaHandler, SourceNodeID)
 	}
+
+	// launch the HandleStoreandFindValue function as a goroutine. 
 
 	<-ctx.Done()
 
@@ -166,7 +168,7 @@ func bootstrapKademlia(handler *integration.ComprehensiveKademliaHandler, p *mod
 	}
 }
 
-func handleFindValue(p *models.UserPeer, ctx context.Context, kademliaHandler *integration.ComprehensiveKademliaHandler, SourceNodeID []byte) {
+func handleFindValueUser(p *models.UserPeer, ctx context.Context, kademliaHandler *integration.ComprehensiveKademliaHandler, SourceNodeID []byte) {
 	log.Println("🔍 Starting find_value process...")
 	test_embedding := []float64{0.1, 0.2, 0.3, 0.4, 0.5}
 	threshold := 0.7
@@ -203,21 +205,6 @@ func handleFindValue(p *models.UserPeer, ctx context.Context, kademliaHandler *i
 		TargetNodeID:   TargetNodeID,
 		ReceiverPeerID: nextPID,
 	}
-
-	requestBody, newRoute := helpers.BuildKademliaFindValueRequest(kademliaHandler, SourceNodeID, test_embedding)
-	params.Route = newRoute
-
-	resp, err := helpers.SendJSON(p, ctx, nextPID, params, requestBody)
-	if err != nil {
-		log.Printf("Error sending find_value request: %v", err)
-	} else if len(resp) > 0 {
-		var respDec any
-		json.Unmarshal(resp, &respDec)
-		log.Printf("Response: %+v", respDec)
-	} else {
-		log.Println("Received empty response")
-	}
-
 	// while depth!=4 && found!=true keep getting responses
 
 	// LOAD THE ID AND COMPARE WITH THE SOURCEID TO SEE WHAT STRUCT YOU HAVE TO BUILD
@@ -225,8 +212,12 @@ func handleFindValue(p *models.UserPeer, ctx context.Context, kademliaHandler *i
 	found := false
 	for depth <= 4{
 		// Send the request again (simulate getting a new response)
-		if depth >=4 && found{
-			break
+		requestBody, newRoute := helpers.BuildKademliaFindValueRequest(kademliaHandler, SourceNodeID, test_embedding, depth)
+		params.Route = newRoute
+		if found {
+			if outputMsg, ok := requestBody["output_message"].(map[string]interface{}); ok {
+				outputMsg["Found"] = true
+			}
 		}
 		resp, err := helpers.SendJSON(p, ctx, nextPID, params, requestBody)
 		if err != nil {
@@ -240,14 +231,20 @@ func handleFindValue(p *models.UserPeer, ctx context.Context, kademliaHandler *i
 			if val, ok := respDec["Found"].(bool); ok && val {
 				found = true
 				depth++;
+			}else{
+				found = false
 			}
+			params.ReceiverPeerID = respDec["NextPeerID"].(string)
 		} else {
 			log.Println("Received empty response")
-		}		
+			}		
+		if depth >=4 && found{
+			break
+		}
 	}
 }
 
-func handleStore(p *models.UserPeer, ctx context.Context, kademliaHandler *integration.ComprehensiveKademliaHandler, SourceNodeID []byte) {
+func handleStoreUser(p *models.UserPeer, ctx context.Context, kademliaHandler *integration.ComprehensiveKademliaHandler, SourceNodeID []byte) {
 	log.Println("🔍 Starting store process...")
 	test_embedding := []float64{0.1, 0.2, 0.3, 0.4, 0.5}
 	threshold := 0.7
@@ -285,22 +282,42 @@ func handleStore(p *models.UserPeer, ctx context.Context, kademliaHandler *integ
 		ReceiverPeerID: nextPID,
 	}
 
-	requestBody, newRoute := helpers.BuildKademliaStoreRequest(kademliaHandler, SourceNodeID, test_embedding)
-	params.Route = newRoute
-
-	resp, err := helpers.SendJSON(p, ctx, nextPID, params, requestBody)
-	if err != nil {
-		log.Printf("Error sending find_value request: %v", err)
-	} else if len(resp) > 0 {
-		var respDec any
-		json.Unmarshal(resp, &respDec)
-		log.Printf("Response: %+v", respDec)
-	} else {
-		log.Println("Received empty response")
+	depth := 1
+	found := false
+	for depth <= 4{
+		// Send the request again (simulate getting a new response)
+		requestBody, newRoute := helpers.BuildKademliaStoreRequest(kademliaHandler, SourceNodeID, test_embedding, depth)
+		params.Route = newRoute
+		if found {
+			if outputMsg, ok := requestBody["output_message"].(map[string]interface{}); ok {
+				outputMsg["Found"] = true
+			}
+		}
+		resp, err := helpers.SendJSON(p, ctx, nextPID, params, requestBody)
+		if err != nil {
+			log.Printf("Error sending find_value request: %v", err)
+			break
+		} else if len(resp) > 0 {
+			var respDec map[string]interface{}
+			json.Unmarshal(resp, &respDec)
+			log.Printf("Response (depth %d): %+v", depth, respDec)
+			// Check if 'found' is true in the response (customize as needed)
+			if val, ok := respDec["Found"].(bool); ok && val {
+				found = true
+				depth++;
+			}else{
+				found = false
+			}
+			params.ReceiverPeerID = respDec["NextPeerID"].(string)
+		} else {
+			log.Println("Received empty response")
+			}		
+		if depth >=4 && found{
+			break
+		}
 	}
-
 	// while depth!=4 && found!=true keep getting responses
-	// we also have to ensure that the response being generated is being stored at eachd depth
+	// we also have to ensure that the response being generated is being stored at each depth
 
 }
 

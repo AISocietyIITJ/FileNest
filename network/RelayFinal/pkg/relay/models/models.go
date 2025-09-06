@@ -41,7 +41,7 @@ type EmbeddingSearchResponse struct {
 	Depth        int       `json:"depth"`
 	SourceNodeID []byte    `json:"source_node_id"`
 	SourcePeerID string    `json:"source_peer_id"`
-	NextNodeID   []byte    `json:"next_node_id"`
+	NextPeerID   string    `json:"next_peer_id"`
 	Found        bool      `json:"found"`
 	FileEmbed    []float64 `json:"file_embed"`
 }
