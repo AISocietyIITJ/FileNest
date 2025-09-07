@@ -16,101 +16,11 @@ type RelayDist struct {
 	dist    *big.Int
 }
 
-// func StartNode(relayMultiAddrList []string) {
-// 	fmt.Println("[DEBUG] Starting Node with relayMultiAddrList:", relayMultiAddrList)
+var NetHandler *network.NetworkHandler
 
-// 	var err error
-// 	Peer, err = NewPeer(relayMultiAddrList, "depth")
-// 	if err != nil {
-// 		fmt.Println("[ERROR] Error creating peer:", err)
-// 		return
-// 	}
-
-// 	ctx := context.Background()
-// 	if err := Start(Peer, ctx); err != nil {
-// 		log.Fatal("[FATAL] Start failed:", err)
-// 	}
-// 	fmt.Println("[DEBUG] Node started successfully.")
-// }
-
-// func GET(targetPeerID string, route string) ([]byte, error) {
-// 	fmt.Println("[DEBUG][GET] Called with targetPeerID:", targetPeerID, " route:", route)
-
-// 	reqparams := make(map[string]string)
-// 	parts := strings.Split(route, "/")
-// 	fmt.Println("[DEBUG][GET] Route split parts:", parts)
-
-// 	params := strings.Split(parts[1], "&&")
-// 	fmt.Println("[DEBUG][GET] Extracted params:", params)
-
-// 	for i := range params {
-// 		key := strings.Split(params[i], "=")[0]
-// 		value := strings.Split(params[i], "=")[1]
-// 		reqparams[key] = value
-// 		fmt.Printf("[DEBUG][GET] Param parsed key=%s value=%s\n", key, value)
-// 	}
-
-// 	reqparams["Method"] = "GET"
-
-// 	jsonReq, err := json.Marshal(reqparams)
-// 	if err != nil {
-// 		fmt.Println("[ERROR][GET] Failed to marshal req params:", err)
-// 		return nil, err
-// 	}
-// 	fmt.Println("[DEBUG][GET] Marshaled reqparams JSON:", string(jsonReq))
-
-// 	ctx := context.Background()
-// 	GetResp, err := Send(Peer, ctx, targetPeerID, jsonReq, nil)
-// 	if err != nil {
-// 		fmt.Println("[ERROR][GET] Error sending request:", err)
-// 		return nil, err
-// 	}
-
-// 	GetResp = bytes.TrimRight(GetResp, "\x00")
-// 	fmt.Println("[DEBUG][GET] Response (trimmed):", string(GetResp))
-// 	return GetResp, nil
-// }
-
-// func POST(targetPeerID string, route string, body []byte) ([]byte, error) {
-// 	fmt.Println("[DEBUG][POST] Called with targetPeerID:", targetPeerID, " route:", route, " body:", string(body))
-
-// 	ctx := context.Background()
-// 	timeoutCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-// 	defer cancel()
-
-// 	reqparams := make(map[string]string)
-// 	parts := strings.Split(route, "/")
-// 	fmt.Println("[DEBUG][POST] Route split parts:", parts)
-
-// 	params := strings.Split(parts[1], "&&")
-// 	fmt.Println("[DEBUG][POST] Extracted params:", params)
-
-// 	for i := range params {
-// 		key := strings.Split(params[i], "=")[0]
-// 		value := strings.Split(params[i], "=")[1]
-// 		reqparams[key] = value
-// 		fmt.Printf("[DEBUG][POST] Param parsed key=%s value=%s\n", key, value)
-// 	}
-
-// 	reqparams["Method"] = "POST"
-
-// 	jsonReq, err := json.Marshal(reqparams)
-// 	if err != nil {
-// 		fmt.Println("[ERROR][POST] Failed to marshal req params:", err)
-// 		return nil, err
-// 	}
-// 	fmt.Println("[DEBUG][POST] Marshaled reqparams JSON:", string(jsonReq))
-
-// 	GetResp, err := Send(Peer, timeoutCtx, targetPeerID, jsonReq)
-// 	if err != nil {
-// 		fmt.Println("[ERROR][POST] Error sending request:", err)
-// 		return nil, err
-// 	}
-
-// 	GetResp = bytes.TrimRight(GetResp, "\x00")
-// 	fmt.Println("[DEBUG][POST] Response (trimmed):", string(GetResp))
-// 	return GetResp, nil
-// }
+func SetNetworkHandler(handler *network.NetworkHandler) {
+    NetHandler = handler
+}
 
 func ServeGetReq(paramsBytes []byte) []byte {
 	fmt.Println("[DEBUG][ServeGetReq] Received params:", string(paramsBytes))
@@ -126,11 +36,11 @@ func ServeGetReq(paramsBytes []byte) []byte {
 	switch params["route"] {
 	case "find_value":
 		fmt.Println("[DEBUG][ServeGetReq] Handling route: find_value")
-		return network.FindValueHandler(params)
+		return NetHandler.FindValueHandler(params)
 
 	case "ping":
 		fmt.Println("[DEBUG][ServeGetReq] Handling route: ping")
-		return network.PingHandler(params)
+		return NetHandler.PingHandler(params)
 
 	default:
 		fmt.Println("[WARN][ServeGetReq] Unknown route:", params["route"])
@@ -153,8 +63,7 @@ func ServePostReq(paramsBytes []byte, bodyBytes []byte) []byte {
 	switch params["route"] {
 	case "store":
 		fmt.Println("[DEBUG][ServePostReq] Handling route: store")
-		return network.StoreHandler()
-
+		return NetHandler.StoreHandler(params, bodyBytes)
 	default:
 		fmt.Println("[WARN][ServePostReq] Unknown POST route:", params["route"])
 	}

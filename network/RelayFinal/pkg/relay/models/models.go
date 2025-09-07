@@ -29,7 +29,7 @@ type EmbeddingSearchRequest struct {
 	ReceiverPeerID string `json:"receiver_peer_id"`
 	QueryEmbed   []float64 `json:"embed"`
 	Depth        int       `json:"prev_depth"`
-	Type         string    `json:"query_type"`
+	Type         string    `json:"type"`
 	Threshold    float64   `json:"threshold"`
 	ResultsCount int       `json:"results_count"`
 	TargetNodeID []byte    `json:"target_node_id"`

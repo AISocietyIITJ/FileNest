@@ -182,9 +182,10 @@ func NewPeer(relayMultiAddrList []string, peerType string) (*models.UserPeer, er
 		log.Println("[DEBUG] Setting stream handler for Depth protocol")
 		h.SetStreamHandler(UserPeerProtocol, handleDepthStream)
 	case "user":
-		log.Println("[DEBUG] Setting stream handler for User protocol")
-		h.SetStreamHandler(UserPeerProtocol, handleDepthStream)
-	}
+		log.Println("[DEBUG] Peer type is 'user'. This peer will act as a client and will not serve incoming requests.")
+    default:
+        log.Printf("[WARN] Unknown peer type: %s. Not setting a stream handler.", peerType)
+    }
 	return dp, nil
 }
 

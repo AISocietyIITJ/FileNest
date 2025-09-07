@@ -10,6 +10,7 @@ import (
 	"final/backend/pkg/types"
 	genmodels "final/network/RelayFinal/pkg/generalpeer/models"
 	"final/network/RelayFinal/pkg/generalpeer/ws"
+	"final/network/RelayFinal/pkg/network"
 	"final/network/RelayFinal/pkg/network/helpers"
 	relayhelper "final/network/RelayFinal/pkg/relay/helpers"
 	"final/network/RelayFinal/pkg/relay/models"
@@ -85,6 +86,9 @@ func main() {
 		return
 	}
 
+	//networkHandler for dep. injection
+	netHandler := network.NewNetworkHandler(kademliaHandler)
+    peer.SetNetworkHandler(netHandler)
 	// ---- Upsert Node and Bootstrap ----
 	decSelfNodeID := hex.EncodeToString(selfNodeID)
 	if err = relayhelper.UpsertNode(decSelfNodeID, p.Host.ID().String()); err != nil {
