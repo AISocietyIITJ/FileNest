@@ -17,9 +17,17 @@ import (
 	"final/network/RelayFinal/pkg/relay/peer"
 	"flag"
 	"log"
+	"time"
 
 	_ "github.com/mattn/go-sqlite3"
 )
+
+type PeerDoc struct {
+    PeerID    string    `bson:"peerid"`
+    NodeID    string    `bson:"nodeid"`
+    D1TV      []float64 `bson:"D1TV"`
+    UpdatedAt time.Time `bson:"updatedAt"`
+}
 
 func main() {
 	// ---- Flags ----
@@ -91,18 +99,18 @@ func main() {
 	decSelfNodeID := hex.EncodeToString(selfNodeID)
 	
 	peers, err := relayhelper.GetAllPeers()
-	if(err != nil){
-		log.Printf("ma chuda")
+	if err != nil {
+		log.Printf("Error fetching peers: %v", err)
 	}
-	for _, peer := range peers {
-		if peerMap, ok := peer.(map[string]any); ok {
-			nodeIDStr, _ := peerMap["nodeid"].(string)
-			embedding, _ := peerMap["D1TV"].([]float64)
-			if nodeIDStr != "" && embedding != nil {
-				bootstrapID, err := hex.DecodeString(nodeIDStr)
-				if err == nil {
-					kademliaHandler.StoreEmbedding(bootstrapID, embedding)
-				}
+	for _, doc := range peers {
+		// log.Printf("peer struct is: %+v", doc)
+		nodeIDStr := doc.NodeID
+		embedding := doc.D1TV
+		if nodeIDStr != "" && embedding != nil {
+			bootstrapID, err := hex.DecodeString(nodeIDStr)
+			if err == nil {
+				log.Printf("Storing embed: %v", embedding)
+				kademliaHandler.StoreEmbedding(bootstrapID, embedding)
 			}
 		}
 	}
@@ -123,8 +131,6 @@ func main() {
 
 
 
-	// !!! storeTestEmbeddings(kademliaHandler, selfNodeID)
-
 	// ---- Handle CLI Actions ----
 	if *findval {
 		handleFindValueUser(p, ctx, kademliaHandler, SourceNodeID)
@@ -133,8 +139,6 @@ func main() {
 	if *store {
 		handleStoreUser(p, ctx, kademliaHandler, SourceNodeID)
 	}
-
-	// launch the HandleStoreandFindValue function as a goroutine. 
 
 	<-ctx.Done()
 
@@ -150,20 +154,19 @@ func main() {
 // ---- Action Handlers ----
 //
 
-func bootstrapKademlia(kademliaHandler *integration.ComprehensiveKademliaHandler, peers []any) {
-	for _, peer := range peers {
-		if peerMap, ok := peer.(map[string]any); ok {
-			nodeIDStr, _ := peerMap["nodeid"].(string)
-			peerID, _ := peerMap["peerid"].(string)
-			if nodeIDStr != "" && peerID != "" {
-				bootstrapID, err := hex.DecodeString(nodeIDStr)
-				if err == nil {
-					pInfo := types.PeerInfo{NodeID: bootstrapID, PeerID: peerID}
-					kademliaHandler.AddPeerToRoutingTable(pInfo)
-				}
-			}
-		}
-	}
+func bootstrapKademlia(kademliaHandler *integration.ComprehensiveKademliaHandler, peers []relayhelper.PeerDoc) {
+    for _, peer := range peers {
+        nodeIDStr := peer.NodeID
+        peerID := peer.PeerID
+        log.Printf("Bootstrapped pid: %v \n", peerID)
+        if nodeIDStr != "" && peerID != "" {
+            bootstrapID, err := hex.DecodeString(nodeIDStr)
+            if err == nil {
+                pInfo := types.PeerInfo{NodeID: bootstrapID, PeerID: peerID}
+                kademliaHandler.AddPeerToRoutingTable(pInfo)
+            }
+        }
+    }
 }
 
 func handleFindValueUser(p *models.UserPeer, ctx context.Context, kademliaHandler *integration.ComprehensiveKademliaHandler, SourceNodeID []byte) {

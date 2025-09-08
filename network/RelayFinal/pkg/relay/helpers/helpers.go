@@ -14,6 +14,13 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
+type PeerDoc struct {
+    PeerID    string    `bson:"peerid"`
+    NodeID    string    `bson:"nodeid"`
+    D1TV      []float64 `bson:"D1TV"`
+    UpdatedAt time.Time `bson:"updatedAt"`
+}
+
 func SetupMongo(uri string) (*mongo.Client, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -114,7 +121,7 @@ func UpsertNode(nodeid string, peerid string, embed []float64) error {
     return nil
 }
 
-func GetAllPeers() ([]any, error) {
+func GetAllPeers() ([]PeerDoc, error) {
     godotenv.Load(".env")
     uri := os.Getenv("MONGO_URI")
     client, err := SetupMongo(uri)
@@ -131,17 +138,13 @@ func GetAllPeers() ([]any, error) {
     }
     defer cursor.Close(ctx)
 
-    var peers []any
+    var peers []PeerDoc
     for cursor.Next(ctx) {
-		var doc struct {
-			PeerID   string    `bson:"peerid"`
-			NodeID   string    `bson:"nodeid"`
-			D1TV     []float64 `bson:"D1TV"`
-			UpdatedAt time.Time `bson:"updatedAt"`
-		}
+        var doc PeerDoc
         if err := cursor.Decode(&doc); err != nil {
             return nil, fmt.Errorf("failed to decode node document: %w", err)
         }
+        // log.Printf("doc is %+v \n", doc)
         peers = append(peers, doc)
     }
 
