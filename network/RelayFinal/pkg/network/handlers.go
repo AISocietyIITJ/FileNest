@@ -148,7 +148,7 @@ func (nh *NetworkHandler) PingHandler(params map[string]any) []byte {
 func (nh *NetworkHandler) StoreHandler(params map[string]any, body []byte) []byte {
     log.Printf("[StoreHandler] Received store request with params: %+v", params)
 
-    targetNodeIDHex, ok := params["TargetNodeID"].(string)
+    targetNodeIDHex, ok := params["target_node_id"].(string)
     if !ok {
         log.Println("[StoreHandler] Error: TargetNodeID not found or not a string in params")
         return nil
@@ -172,7 +172,7 @@ func (nh *NetworkHandler) StoreHandler(params map[string]any, body []byte) []byt
         valueToStore := string(body)
 
         // The key is the embedding associated with the data.
-        embedding, ok := params["Embedding"].([]any)
+        embedding, ok := params["embed"].([]any)
         if !ok {
             log.Println("[StoreHandler] Error: Embedding not found in params for store operation")
             response["Stored"] = false

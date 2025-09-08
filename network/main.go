@@ -197,13 +197,15 @@ func handleFindValueUser(p *models.UserPeer, ctx context.Context, kademliaHandle
     nextPID := nextNode[0].PeerID
     log.Printf("Found next hop PeerID: %s", nextPID)
 
-    // 3. Build and send the request
+	SourceNodeIDEnc := hex.EncodeToString(SourceNodeID)
+    TargetNodeIDEnc := hex.EncodeToString(TargetNodeID)
+	// 3. Build and send the request
     params := models.EmbeddingSearchRequest{
         Type:           "GET",
         Route:          "find_value",
-        SourceNodeID:   SourceNodeID,
+        SourceNodeID:   SourceNodeIDEnc,
         SourcePeerID:   p.Host.ID().String(),
-        TargetNodeID:   TargetNodeID,
+        TargetNodeID:   TargetNodeIDEnc,
         ReceiverPeerID: nextPID,
         QueryEmbed:      test_embedding,
     }
@@ -324,9 +326,11 @@ func handleFindValueUser(p *models.UserPeer, ctx context.Context, kademliaHandle
 
 func handleStoreUser(p *models.UserPeer, ctx context.Context, kademliaHandler *integration.ComprehensiveKademliaHandler, SourceNodeID []byte) {
 	log.Println("🔍 Starting store process...")
-	test_embedding := []float64{0.1, 0.2, 0.3, 0.4, 0.5}
+	test_embedding := []float64{0.15, 0.25, 0.35, 0.45, 0.55}
 	threshold := 0.7
 	limit := 1
+
+	SourceNodeIDEnc := hex.EncodeToString(SourceNodeID)
 
 	// 1. Find the node ID of the peer storing the most similar embedding in our local DB
 	targetNodeIDs, err := kademliaHandler.Node().FindSimilar(test_embedding, threshold, limit)
@@ -339,7 +343,8 @@ func handleStoreUser(p *models.UserPeer, ctx context.Context, kademliaHandler *i
 		return
 	}
 	TargetNodeID := targetNodeIDs[0].Key
-	log.Printf("Found target NodeID: %s", hex.EncodeToString(TargetNodeID))
+	TargetNodeIDEnc := hex.EncodeToString(TargetNodeID)
+	// log.Printf("Found target NodeID: %s", hex.EncodeToString(TargetNodeID))
 
 	// 2. Find the closest peer in our routing table to the target node ID
 	nextNode := kademliaHandler.Node().RoutingTable().FindClosest(TargetNodeID, limit)
@@ -354,9 +359,9 @@ func handleStoreUser(p *models.UserPeer, ctx context.Context, kademliaHandler *i
 	params := models.EmbeddingSearchRequest{
 		Type:           "POST",
 		Route:          "store",
-		SourceNodeID:   SourceNodeID,
+		SourceNodeID:   SourceNodeIDEnc,
 		SourcePeerID:   p.Host.ID().String(),
-		TargetNodeID:   TargetNodeID,
+		TargetNodeID:   TargetNodeIDEnc,
 		ReceiverPeerID: nextPID,
 		QueryEmbed: test_embedding,
 	}
