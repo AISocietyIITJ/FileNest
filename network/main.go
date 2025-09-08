@@ -108,14 +108,21 @@ func main() {
 		embedding := doc.D1TV
 		if nodeIDStr != "" && embedding != nil {
 			bootstrapID, err := hex.DecodeString(nodeIDStr)
-			if err == nil {
+			flag := 0
+			for i, _ := range bootstrapID{
+				if bootstrapID[i] != SourceNodeID[i]{
+					flag = 1
+					break
+				}
+			}
+			if err == nil && flag==0{
 				log.Printf("Storing embed: %v", embedding)
 				kademliaHandler.StoreEmbedding(bootstrapID, embedding)
 			}
 		}
 	}
 
-	embed := []float64{0.1, 0.2, 0.3, 0.4, 0.5}
+	embed := []float64{0.9, 0.1, 0.1, 0.4, 0.7}
 	if err = relayhelper.UpsertNode(decSelfNodeID, p.Host.ID().String(), embed); err != nil {
 		log.Printf("Error in upserting node to mongo: %v \n", err.Error())
 	} else {
