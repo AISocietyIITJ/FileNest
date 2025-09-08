@@ -17,7 +17,6 @@ import (
 	"final/network/RelayFinal/pkg/relay/peer"
 	"flag"
 	"log"
-	"time"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -25,9 +24,7 @@ import (
 func main() {
 	// ---- Flags ----
 	findval := flag.Bool("findval", false, "Search for query embedding")
-	pid := flag.String("pid", "", "Target peer ID to send request to (comma sep)")
 	ptype := flag.String("type", "user", "Upload a file to the network")
-	nodeidHex := flag.String("nodeid", "", "Node ID for target peer (hex, comma sep)")
 	store := flag.Bool("store", false, "Upload a file to the network")
 	flag.Parse()
 
@@ -86,19 +83,36 @@ func main() {
 		log.Printf("Failed to initialize Kademlia: %v", err)
 		return
 	}
-
+	
 	//networkHandler for dep. injection
 	netHandler := network.NewNetworkHandler(kademliaHandler)
     peer.SetNetworkHandler(netHandler)
 	// ---- Upsert Node and Bootstrap ----
 	decSelfNodeID := hex.EncodeToString(selfNodeID)
+	
+	peers, err := relayhelper.GetAllPeers()
+	if(err != nil){
+		log.Printf("ma chuda")
+	}
+	for _, peer := range peers {
+		if peerMap, ok := peer.(map[string]any); ok {
+			nodeIDStr, _ := peerMap["nodeid"].(string)
+			embedding, _ := peerMap["D1TV"].([]float64)
+			if nodeIDStr != "" && embedding != nil {
+				bootstrapID, err := hex.DecodeString(nodeIDStr)
+				if err == nil {
+					kademliaHandler.StoreEmbedding(bootstrapID, embedding)
+				}
+			}
+		}
+	}
 
 	embed := []float64{0.1, 0.2, 0.3, 0.4, 0.5}
 	if err = relayhelper.UpsertNode(decSelfNodeID, p.Host.ID().String(), embed); err != nil {
 		log.Printf("Error in upserting node to mongo: %v \n", err.Error())
 	} else {
 		log.Println("✓ Kademlia integration initialized")
-		bootstrapKademlia(kademliaHandler, p, ctx, *nodeidHex, *pid)
+		bootstrapKademlia(kademliaHandler, peers)
 	}
 
 	// ---- Print routing stats ----
@@ -107,7 +121,10 @@ func main() {
 	log.Printf("📊 Node Statistics: %+v", stats)
 	log.Printf("🗺️  Routing table contains %d peers", len(routingInfo))
 
-	storeTestEmbeddings(kademliaHandler, selfNodeID)
+
+
+	// !!! storeTestEmbeddings(kademliaHandler, selfNodeID)
+
 	// ---- Handle CLI Actions ----
 	if *findval {
 		handleFindValueUser(p, ctx, kademliaHandler, SourceNodeID)
@@ -133,45 +150,18 @@ func main() {
 // ---- Action Handlers ----
 //
 
-func bootstrapKademlia(handler *integration.ComprehensiveKademliaHandler, p *models.UserPeer, ctx context.Context, nodeidHex, pid string) {
-	if nodeidHex == "" || pid == "" {
-		log.Println("No bootstrap nodes provided, skipping bootstrap")
-		return
-	}
-
-	bootstrapNodes, err := helpers.ParseBootstrapFlags(nodeidHex, pid)
-	if err != nil {
-		log.Printf("Error parsing bootstrap flags: %v", err)
-		return
-	}
-
-	if len(bootstrapNodes) > 0 {
-		log.Println("🚀 Starting Kademlia bootstrap process...")
-		successCount := 0
-		for _, addr := range bootstrapNodes {
-			nodeBytes, err := hex.DecodeString(addr.NodeID)
-			if err != nil {
-				log.Printf("❌ Invalid NodeID for %s: %v", addr, err)
-				continue
-			}
-			if err := addPeerToRoutingTable(handler, addr.PeerID, nodeBytes); err != nil {
-				log.Printf("❌ Bootstrap failed for %s: %+v", addr, err)
-			} else {
-				successCount++
-				log.Printf("✅ Bootstrap successful for %s", addr)
-			}
-		}
-
-		if successCount > 0 {
-			log.Printf("✓ Bootstrap completed with %d/%d successful connections", successCount, len(bootstrapNodes))
-			// Ping bootstrap peers
-			for _, addr := range bootstrapNodes {
-				if err := pingPeer(p, ctx, addr.PeerID); err != nil {
-					log.Printf("pingPeer err: %v", err.Error())
+func bootstrapKademlia(kademliaHandler *integration.ComprehensiveKademliaHandler, peers []any) {
+	for _, peer := range peers {
+		if peerMap, ok := peer.(map[string]any); ok {
+			nodeIDStr, _ := peerMap["nodeid"].(string)
+			peerID, _ := peerMap["peerid"].(string)
+			if nodeIDStr != "" && peerID != "" {
+				bootstrapID, err := hex.DecodeString(nodeIDStr)
+				if err == nil {
+					pInfo := types.PeerInfo{NodeID: bootstrapID, PeerID: peerID}
+					kademliaHandler.AddPeerToRoutingTable(pInfo)
 				}
 			}
-		} else {
-			log.Println("⚠️  Bootstrap failed for all nodes - running in isolated mode")
 		}
 	}
 }
@@ -414,26 +404,26 @@ func handleStoreUser(p *models.UserPeer, ctx context.Context, kademliaHandler *i
 
 // ---- Helpers ----
 
-func addPeerToRoutingTable(handler *integration.ComprehensiveKademliaHandler, pid string, nodeID []byte) error {
-	log.Printf("Adding peer to routing table: PID=%s NID len=%v", pid, len(nodeID))
-	return handler.AddPeerToRoutingTable(types.PeerInfo{NodeID: nodeID, PeerID: pid})
-}
+// func addPeerToRoutingTable(handler *integration.ComprehensiveKademliaHandler, pid string, nodeID []byte) error {
+// 	log.Printf("Adding peer to routing table: PID=%s NID len=%v", pid, len(nodeID))
+// 	return handler.AddPeerToRoutingTable(types.PeerInfo{NodeID: nodeID, PeerID: pid})
+// }
 
-func pingPeer(p *models.UserPeer, ctx context.Context, pid string) error {
-	params := models.PingRequest{
-		Type:           "GET",
-		Route:          "ping",
-		ReceiverPeerID: pid,
-		Timestamp:      time.Now().Unix(),
-	}
-	resp, err := helpers.SendJSON(p, ctx, pid, params, map[string]interface{}{})
-	if err != nil {
-		log.Printf("Ping failed for peer %s: %v", pid, err.Error())
-		return err
-	}
-	log.Printf("Ping response from peer %s: %s", pid, string(resp))
-	return nil
-}
+// func pingPeer(p *models.UserPeer, ctx context.Context, pid string) error {
+// 	params := models.PingRequest{
+// 		Type:           "GET",
+// 		Route:          "ping",
+// 		ReceiverPeerID: pid,
+// 		Timestamp:      time.Now().Unix(),
+// 	}
+// 	resp, err := helpers.SendJSON(p, ctx, pid, params, map[string]interface{}{})
+// 	if err != nil {
+// 		log.Printf("Ping failed for peer %s: %v", pid, err.Error())
+// 		return err
+// 	}
+// 	log.Printf("Ping response from peer %s: %s", pid, string(resp))
+// 	return nil
+// }
 
 func saveRoutingTableToDB(handler *integration.ComprehensiveKademliaHandler) error {
 	routingDBPath := "routing_table.db"
@@ -460,36 +450,36 @@ func saveRoutingTableToDB(handler *integration.ComprehensiveKademliaHandler) err
 	return nil
 }
 
-func storeTestEmbeddings(handler *integration.ComprehensiveKademliaHandler, nodeidBytes []byte) {
-	testFiles := []genmodels.ClusterFile{
-		{
-			Filename: "documentYug.pdf",
-			Metadata: genmodels.FileMetadata{
-				Name:         "documentYug.pdf",
-				CreatedAt:    time.Now().Format(time.RFC3339),
-				LastModified: time.Now().Format(time.RFC3339),
-				FileSize:     1024.5,
-				UpdatedAt:    time.Now().Format(time.RFC3339),
-			},
-			Embedding: []float64{0.1, 0.2, 0.3, 0.4, 0.5},
-		},
-		{
-			Filename: "imageYug.jpg",
-			Metadata: genmodels.FileMetadata{
-				Name:         "imageYug.jpg",
-				CreatedAt:    time.Now().Format(time.RFC3339),
-				LastModified: time.Now().Format(time.RFC3339),
-				FileSize:     2048.7,
-				UpdatedAt:    time.Now().Format(time.RFC3339),
-			},
-			Embedding: []float64{0.9, 0.1, 0.0, 0.0, 0.0},
-		},
-	}
-	for _, file := range testFiles {
-		if err := handler.StoreEmbedding(nodeidBytes, file.Embedding); err != nil {
-			log.Printf("Failed to store embedding for %s: %v", file.Filename, err)
-		} else {
-			log.Printf("✓ Stored embedding for file: %s", file.Filename)
-		}
-	}
-}
+// func storeTestEmbeddings(handler *integration.ComprehensiveKademliaHandler, nodeidBytes []byte) {
+// 	testFiles := []genmodels.ClusterFile{
+// 		{
+// 			Filename: "documentYug.pdf",
+// 			Metadata: genmodels.FileMetadata{
+// 				Name:         "documentYug.pdf",
+// 				CreatedAt:    time.Now().Format(time.RFC3339),
+// 				LastModified: time.Now().Format(time.RFC3339),
+// 				FileSize:     1024.5,
+// 				UpdatedAt:    time.Now().Format(time.RFC3339),
+// 			},
+// 			Embedding: []float64{0.1, 0.2, 0.3, 0.4, 0.5},
+// 		},
+// 		{
+// 			Filename: "imageYug.jpg",
+// 			Metadata: genmodels.FileMetadata{
+// 				Name:         "imageYug.jpg",
+// 				CreatedAt:    time.Now().Format(time.RFC3339),
+// 				LastModified: time.Now().Format(time.RFC3339),
+// 				FileSize:     2048.7,
+// 				UpdatedAt:    time.Now().Format(time.RFC3339),
+// 			},
+// 			Embedding: []float64{0.9, 0.1, 0.0, 0.0, 0.0},
+// 		},
+// 	}
+// 	for _, file := range testFiles {
+// 		if err := handler.StoreEmbedding(nodeidBytes, file.Embedding); err != nil {
+// 			log.Printf("Failed to store embedding for %s: %v", file.Filename, err)
+// 		} else {
+// 			log.Printf("✓ Stored embedding for file: %s", file.Filename)
+// 		}
+// 	}
+// }

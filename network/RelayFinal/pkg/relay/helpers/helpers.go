@@ -114,7 +114,7 @@ func UpsertNode(nodeid string, peerid string, embed []float64) error {
     return nil
 }
 
-func GetAllPeers() ([]string, error) {
+func GetAllPeers() ([]any, error) {
     godotenv.Load(".env")
     uri := os.Getenv("MONGO_URI")
     client, err := SetupMongo(uri)
@@ -131,15 +131,18 @@ func GetAllPeers() ([]string, error) {
     }
     defer cursor.Close(ctx)
 
-    var peers []string
+    var peers []any
     for cursor.Next(ctx) {
-        var doc struct {
-            PeerID string `bson:"peerid"`
-        }
+		var doc struct {
+			PeerID   string    `bson:"peerid"`
+			NodeID   string    `bson:"nodeid"`
+			D1TV     []float64 `bson:"D1TV"`
+			UpdatedAt time.Time `bson:"updatedAt"`
+		}
         if err := cursor.Decode(&doc); err != nil {
             return nil, fmt.Errorf("failed to decode node document: %w", err)
         }
-        peers = append(peers, doc.PeerID)
+        peers = append(peers, doc)
     }
 
     return peers, nil
