@@ -3,6 +3,7 @@ package network
 import (
 	"encoding/hex"
 	"encoding/json"
+	"final/backend/pkg/identity"
 	"final/backend/pkg/integration"
 	_ "final/network/RelayFinal/pkg/relay/models"
 	"log"
@@ -34,7 +35,10 @@ func (nh *NetworkHandler) FindValueHandler(params map[string]any) []byte {
         return nil
     }
 
-    selfNodeID := nh.Kademlia.Node().NodeID
+    selfNodeID, err := identity.LoadOrCreateNodeID("");
+    if(err != nil){
+        log.Printf("Error during selfNodeID: %v", err.Error())
+    }
 
     response := make(map[string]any)
 

@@ -92,7 +92,9 @@ func main() {
     peer.SetNetworkHandler(netHandler)
 	// ---- Upsert Node and Bootstrap ----
 	decSelfNodeID := hex.EncodeToString(selfNodeID)
-	if err = relayhelper.UpsertNode(decSelfNodeID, p.Host.ID().String()); err != nil {
+
+	embed := []float64{0.1, 0.2, 0.3, 0.4, 0.5}
+	if err = relayhelper.UpsertNode(decSelfNodeID, p.Host.ID().String(), embed); err != nil {
 		log.Printf("Error in upserting node to mongo: %v \n", err.Error())
 	} else {
 		log.Println("✓ Kademlia integration initialized")
@@ -105,6 +107,7 @@ func main() {
 	log.Printf("📊 Node Statistics: %+v", stats)
 	log.Printf("🗺️  Routing table contains %d peers", len(routingInfo))
 
+	storeTestEmbeddings(kademliaHandler, selfNodeID)
 	// ---- Handle CLI Actions ----
 	if *findval {
 		handleFindValueUser(p, ctx, kademliaHandler, SourceNodeID)
@@ -223,7 +226,7 @@ func handleFindValueUser(p *models.UserPeer, ctx context.Context, kademliaHandle
             break
         }
 
-        var respDec map[string]interface{}
+        var respDec map[string]any
         if err := json.Unmarshal(resp, &respDec); err != nil {
             log.Printf("Error unmarshalling find_value response: %v", err)
             break
@@ -455,4 +458,38 @@ func saveRoutingTableToDB(handler *integration.ComprehensiveKademliaHandler) err
 		}
 	}
 	return nil
+}
+
+func storeTestEmbeddings(handler *integration.ComprehensiveKademliaHandler, nodeidBytes []byte) {
+	testFiles := []genmodels.ClusterFile{
+		{
+			Filename: "documentYug.pdf",
+			Metadata: genmodels.FileMetadata{
+				Name:         "documentYug.pdf",
+				CreatedAt:    time.Now().Format(time.RFC3339),
+				LastModified: time.Now().Format(time.RFC3339),
+				FileSize:     1024.5,
+				UpdatedAt:    time.Now().Format(time.RFC3339),
+			},
+			Embedding: []float64{0.1, 0.2, 0.3, 0.4, 0.5},
+		},
+		{
+			Filename: "imageYug.jpg",
+			Metadata: genmodels.FileMetadata{
+				Name:         "imageYug.jpg",
+				CreatedAt:    time.Now().Format(time.RFC3339),
+				LastModified: time.Now().Format(time.RFC3339),
+				FileSize:     2048.7,
+				UpdatedAt:    time.Now().Format(time.RFC3339),
+			},
+			Embedding: []float64{0.9, 0.1, 0.0, 0.0, 0.0},
+		},
+	}
+	for _, file := range testFiles {
+		if err := handler.StoreEmbedding(nodeidBytes, file.Embedding); err != nil {
+			log.Printf("Failed to store embedding for %s: %v", file.Filename, err)
+		} else {
+			log.Printf("✓ Stored embedding for file: %s", file.Filename)
+		}
+	}
 }

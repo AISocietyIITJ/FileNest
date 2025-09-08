@@ -83,64 +83,97 @@ func UpsertRelayAddr(client *mongo.Client, addr string) error {
 	return nil
 }
 
-func UpsertNode(nodeid string, peerid string) error {
-	godotenv.Load(".env")
-	uri := os.Getenv("MONGO_URI")
-	client, err := SetupMongo(uri)
-	if(err != nil){
-		return err
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
+func UpsertNode(nodeid string, peerid string, embed []float64) error {
+    godotenv.Load(".env")
+    uri := os.Getenv("MONGO_URI")
+    client, err := SetupMongo(uri)
+    if err != nil {
+        return err
+    }
+    ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+    defer cancel()
 
-	collection := client.Database("Addrs").Collection("nodes")
+    collection := client.Database("Addrs").Collection("nodes")
 
-	filter := bson.M{"nodeid": nodeid}
-	update := bson.M{
-		"$set": bson.M{
-			"nodeid":    nodeid,
-			"peerid":    peerid,
-			"updatedAt": time.Now(),
-		},
-	}
+    filter := bson.M{"nodeid": nodeid}
+    update := bson.M{
+        "$set": bson.M{
+            "nodeid":    nodeid,
+            "peerid":    peerid,
+            "D1TV":      embed,
+            "updatedAt": time.Now(),
+        },
+    }
 
-	opts := options.Update().SetUpsert(true)
+    opts := options.Update().SetUpsert(true)
 
-	_, err = collection.UpdateOne(ctx, filter, update, opts)
-	if err != nil {
-		return fmt.Errorf("failed to upsert node: %w", err)
-	}
-	return nil
+    _, err = collection.UpdateOne(ctx, filter, update, opts)
+    if err != nil {
+        return fmt.Errorf("failed to upsert node: %w", err)
+    }
+    return nil
 }
-func GetRecentPeers(k int) ([]string, error) {
-	godotenv.Load(".env")
-	uri := os.Getenv("MONGO_URI")
-	client, err := SetupMongo(uri)
-	if err != nil {
-		return nil, err
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
 
-	collection := client.Database("Addrs").Collection("nodes")
-	opts := options.Find().SetSort(bson.M{"updatedAt": -1}).SetLimit(int64(k))
+func GetAllPeers() ([]string, error) {
+    godotenv.Load(".env")
+    uri := os.Getenv("MONGO_URI")
+    client, err := SetupMongo(uri)
+    if err != nil {
+        return nil, err
+    }
+    ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+    defer cancel()
 
-	cursor, err := collection.Find(ctx, bson.M{}, opts)
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch recent peers: %w", err)
-	}
-	defer cursor.Close(ctx)
+    collection := client.Database("Addrs").Collection("nodes")
+    cursor, err := collection.Find(ctx, bson.M{})
+    if err != nil {
+        return nil, fmt.Errorf("failed to fetch peers: %w", err)
+    }
+    defer cursor.Close(ctx)
 
-	var peers []string
-	for cursor.Next(ctx) {
-		var doc struct {
-			PeerID string `bson:"peerid"`
-		}
-		if err := cursor.Decode(&doc); err != nil {
-			return nil, fmt.Errorf("failed to decode node document: %w", err)
-		}
-		peers = append(peers, doc.PeerID)
-	}
+    var peers []string
+    for cursor.Next(ctx) {
+        var doc struct {
+            PeerID string `bson:"peerid"`
+        }
+        if err := cursor.Decode(&doc); err != nil {
+            return nil, fmt.Errorf("failed to decode node document: %w", err)
+        }
+        peers = append(peers, doc.PeerID)
+    }
 
-	return peers, nil
+    return peers, nil
 }
+
+// func GetRecentPeers(k int) ([]string, error) {
+// 	godotenv.Load(".env")
+// 	uri := os.Getenv("MONGO_URI")
+// 	client, err := SetupMongo(uri)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+// 	defer cancel()
+
+// 	collection := client.Database("Addrs").Collection("nodes")
+// 	opts := options.Find().SetSort(bson.M{"updatedAt": -1}).SetLimit(int64(k))
+
+// 	cursor, err := collection.Find(ctx, bson.M{}, opts)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("failed to fetch recent peers: %w", err)
+// 	}
+// 	defer cursor.Close(ctx)
+
+// 	var peers []string
+// 	for cursor.Next(ctx) {
+// 		var doc struct {
+// 			PeerID string `bson:"peerid"`
+// 		}
+// 		if err := cursor.Decode(&doc); err != nil {
+// 			return nil, fmt.Errorf("failed to decode node document: %w", err)
+// 		}
+// 		peers = append(peers, doc.PeerID)
+// 	}
+
+// 	return peers, nil
+// }
