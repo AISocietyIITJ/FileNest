@@ -73,7 +73,7 @@ jobs:
           fi
       - name: Set up Node.js
         if: steps.check_frontend.outputs.exists == 'true'
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '18'
       - name: Install dependencies
@@ -137,7 +137,7 @@ jobs:
           fi
       - name: Set up Node.js
         if: steps.check_shared.outputs.exists == 'true' && steps.check_shared.outputs.type == 'node'
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '18'
       - name: Set up Go
@@ -217,7 +217,7 @@ jobs:
           fi
       - name: Set up Node.js
         if: steps.check_frontend.outputs.exists == 'true'
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '18'
       - name: Lint Frontend
@@ -269,7 +269,7 @@ jobs:
           fi
       - name: Set up Node.js
         if: steps.check_docs.outputs.exists == 'true'
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '18'
       - name: Check documentation links
