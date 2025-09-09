@@ -1,9 +1,10 @@
 package storage
 
 import (
-	"final/backend/pkg/embedding"
+	// "final/backend/pkg/embedding"
 	"fmt"
 	"log"
+	"math"
 	"sort"
 
 	"gorm.io/driver/sqlite"
@@ -44,7 +45,7 @@ func (s *SQLiteStorage) FindSimilar(queryEmbed []float64, threshold float64, lim
 
 	// Calculate similarity for each stored embedding
 	for _, ne := range nodeEmbeddings {
-		similarity := embedding.CosineSimilarity(queryEmbed, []float64(ne.Embedding))
+		similarity, _ := cosineSimilarity(queryEmbed, []float64(ne.Embedding))
 
 		// Only include embeddings that meet the threshold
 		if similarity >= threshold{
@@ -90,4 +91,35 @@ func (s *SQLiteStorage) StoreNodeEmbedding(nodeID []byte, embeddingVec []float64
     // Create a new record for each embedding. This allows multiple embeddings per NodeID.
     result := s.db.Create(&nodeEmbedding)
     return result.Error
+}
+
+
+// CosineSimilarity calculates the cosine similarity between two embedding vectors
+func cosineSimilarity(a, b []float64) (float64, error) {
+	if len(a) != len(b) {
+		return 0, fmt.Errorf("embedding dimensions don't match: %d != %d", len(a), len(b))
+	}
+
+	if len(a) == 0 {
+		return 0, fmt.Errorf("empty embedding vectors")
+	}
+
+	var dotProduct, normA, normB float64
+
+	// Calculate dot product and norms in one pass
+	for i := range a {
+		dotProduct += a[i] * b[i]
+		normA += a[i] * a[i]
+		normB += b[i] * b[i]
+	}
+
+	// Handle zero vectors
+	if normA == 0 || normB == 0 {
+		return 0.0, nil
+	}
+
+	// Calculate cosine similarity
+	similarity := dotProduct / (math.Sqrt(normA) * math.Sqrt(normB))
+
+	return similarity, nil
 }

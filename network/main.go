@@ -109,7 +109,7 @@ func main() {
 		if nodeIDStr != "" && embedding != nil {
 			bootstrapID, err := hex.DecodeString(nodeIDStr)
 			flag := 0
-			for i, _ := range bootstrapID {
+			for i := range bootstrapID {
 				if bootstrapID[i] != SourceNodeID[i] {
 					flag = 1
 					break
@@ -122,7 +122,7 @@ func main() {
 		}
 	}
 
-	embed := []float64{0.8, 0.0, 0.0, 0.3, 0.6}
+	embed := []float64{0.1, 0.2, 0.3, 0.4, 0.6}
 	if err = relayhelper.UpsertNode(decSelfNodeID, p.Host.ID().String(), embed); err != nil {
 		log.Printf("Error in upserting node to mongo: %v \n", err.Error())
 	} else {
@@ -176,7 +176,7 @@ func bootstrapKademlia(kademliaHandler *integration.ComprehensiveKademliaHandler
 
 func handleFindValueUser(p *models.UserPeer, ctx context.Context, kademliaHandler *integration.ComprehensiveKademliaHandler, SourceNodeID []byte) {
 	log.Println("🔍 Starting find_value process...")
-	test_embedding := []float64{0.1, 0.2, 0.3, 0.4, 0.5}
+	test_embedding := []float64{0.15, 0.2, 0.3, 0.4, 0.5}
 	threshold := 0.7
 	limit := 1
 
@@ -237,8 +237,8 @@ func handleFindValueUser(p *models.UserPeer, ctx context.Context, kademliaHandle
 		if wasFound, ok := respDec["Found"].(bool); ok && wasFound {
 			log.Printf("✅ Successfully found value: %v", respDec["Value"])
 			found = true
-			break
 			depth++
+			break
 		} else {
 			found = false
 		}

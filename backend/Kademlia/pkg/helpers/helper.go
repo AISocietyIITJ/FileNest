@@ -1,14 +1,11 @@
 package helpers
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"math"
 	"math/big"
 	"sync"
-
-	"github.com/libp2p/go-libp2p/core/peer"
 )
 
 // EmbeddingProcessor handles cosine similarity calculations for preprocessed embeddings
@@ -77,33 +74,6 @@ func (ep *EmbeddingProcessor) CosineSimilarity(a, b []float64) (float64, error) 
 	return similarity, nil
 }
 
-// CosineSimilarityWithCache calculates cosine similarity with caching for performance
-func (ep *EmbeddingProcessor) CosineSimilarityWithCache(a, b []float64) (float64, error) {
-	// Create cache key (simple concatenation of vector representations)
-	cacheKey := fmt.Sprintf("%v-%v", a[:min(3, len(a))], b[:min(3, len(b))])
-
-	// Check cache first
-	ep.CacheMutex.RLock()
-	if cached, exists := ep.Cache[cacheKey]; exists {
-		ep.CacheMutex.RUnlock()
-		return cached, nil
-	}
-	ep.CacheMutex.RUnlock()
-
-	// Calculate similarity
-	similarity, err := ep.CosineSimilarity(a, b)
-	if err != nil {
-		return 0, err
-	}
-
-	// Store in cache
-	ep.CacheMutex.Lock()
-	ep.Cache[cacheKey] = similarity
-	ep.CacheMutex.Unlock()
-
-	return similarity, nil
-}
-
 // FindSimilarEmbeddings finds embeddings above a certain similarity threshold
 func (ep *EmbeddingProcessor) FindSimilarEmbeddings(queryEmbedding []float64, candidates [][]float64, threshold float64) ([]SimilarityResult, error) {
 	var results []SimilarityResult
@@ -164,47 +134,10 @@ type SimilarityResult struct {
 	Similarity float64   `json:"similarity"`
 }
 
-// IsAboveThreshold checks if similarity is above the default threshold
-func (ep *EmbeddingProcessor) IsAboveThreshold(similarity float64) bool {
-	return similarity >= ep.DefaultThreshold
-}
-
-// BatchCosineSimilarity calculates similarities for multiple embedding pairs
-func (ep *EmbeddingProcessor) BatchCosineSimilarity(pairs []EmbeddingPair) ([]float64, error) {
-	results := make([]float64, len(pairs))
-
-	for i, pair := range pairs {
-		similarity, err := ep.CosineSimilarity(pair.A, pair.B)
-		if err != nil {
-			return nil, fmt.Errorf("error calculating similarity for pair %d: %w", i, err)
-		}
-		results[i] = similarity
-	}
-
-	return results, nil
-}
-
 // EmbeddingPair represents a pair of embeddings for batch processing
 type EmbeddingPair struct {
 	A []float64
 	B []float64
-}
-
-// Helper function for min
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
-// Existing helper functions (keeping them as they are)
-func ParseBootstrapAddr(addr string) (peer.AddrInfo, error) {
-	maddr, err := peer.AddrInfoFromString(addr)
-	if err != nil {
-		return peer.AddrInfo{}, errors.New("invalid bootstrap node multiaddr")
-	}
-	return *maddr, nil
 }
 
 func XORDistance(a, b []byte) *big.Int {
