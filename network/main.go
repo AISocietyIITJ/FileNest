@@ -23,10 +23,10 @@ import (
 )
 
 type PeerDoc struct {
-    PeerID    string    `bson:"peerid"`
-    NodeID    string    `bson:"nodeid"`
-    D1TV      []float64 `bson:"D1TV"`
-    UpdatedAt time.Time `bson:"updatedAt"`
+	PeerID    string    `bson:"peerid"`
+	NodeID    string    `bson:"nodeid"`
+	D1TV      []float64 `bson:"D1TV"`
+	UpdatedAt time.Time `bson:"updatedAt"`
 }
 
 func main() {
@@ -91,13 +91,13 @@ func main() {
 		log.Printf("Failed to initialize Kademlia: %v", err)
 		return
 	}
-	
+
 	//networkHandler for dep. injection
 	netHandler := network.NewNetworkHandler(kademliaHandler)
-    peer.SetNetworkHandler(netHandler)
+	peer.SetNetworkHandler(netHandler)
 	// ---- Upsert Node and Bootstrap ----
 	decSelfNodeID := hex.EncodeToString(selfNodeID)
-	
+
 	peers, err := relayhelper.GetAllPeers()
 	if err != nil {
 		log.Printf("Error fetching peers: %v", err)
@@ -109,20 +109,20 @@ func main() {
 		if nodeIDStr != "" && embedding != nil {
 			bootstrapID, err := hex.DecodeString(nodeIDStr)
 			flag := 0
-			for i, _ := range bootstrapID{
-				if bootstrapID[i] != SourceNodeID[i]{
+			for i, _ := range bootstrapID {
+				if bootstrapID[i] != SourceNodeID[i] {
 					flag = 1
 					break
 				}
 			}
-			if err == nil && flag==0{
+			if err == nil && flag == 0 {
 				log.Printf("Storing embed: %v", embedding)
 				kademliaHandler.StoreEmbedding(bootstrapID, embedding)
 			}
 		}
 	}
 
-	embed := []float64{0.9, 0.1, 0.1, 0.4, 0.7}
+	embed := []float64{0.8, 0.0, 0.0, 0.3, 0.6}
 	if err = relayhelper.UpsertNode(decSelfNodeID, p.Host.ID().String(), embed); err != nil {
 		log.Printf("Error in upserting node to mongo: %v \n", err.Error())
 	} else {
@@ -135,8 +135,6 @@ func main() {
 	routingInfo := kademliaHandler.GetRoutingInfo()
 	log.Printf("📊 Node Statistics: %+v", stats)
 	log.Printf("🗺️  Routing table contains %d peers", len(routingInfo))
-
-
 
 	// ---- Handle CLI Actions ----
 	if *findval {
@@ -162,97 +160,102 @@ func main() {
 //
 
 func bootstrapKademlia(kademliaHandler *integration.ComprehensiveKademliaHandler, peers []relayhelper.PeerDoc) {
-    for _, peer := range peers {
-        nodeIDStr := peer.NodeID
-        peerID := peer.PeerID
-        log.Printf("Bootstrapped pid: %v \n", peerID)
-        if nodeIDStr != "" && peerID != "" {
-            bootstrapID, err := hex.DecodeString(nodeIDStr)
-            if err == nil {
-                pInfo := types.PeerInfo{NodeID: bootstrapID, PeerID: peerID}
-                kademliaHandler.AddPeerToRoutingTable(pInfo)
-            }
-        }
-    }
+	for _, peer := range peers {
+		nodeIDStr := peer.NodeID
+		peerID := peer.PeerID
+		log.Printf("Bootstrapped pid: %v \n", peerID)
+		if nodeIDStr != "" && peerID != "" {
+			bootstrapID, err := hex.DecodeString(nodeIDStr)
+			if err == nil {
+				pInfo := types.PeerInfo{NodeID: bootstrapID, PeerID: peerID}
+				kademliaHandler.AddPeerToRoutingTable(pInfo)
+			}
+		}
+	}
 }
 
 func handleFindValueUser(p *models.UserPeer, ctx context.Context, kademliaHandler *integration.ComprehensiveKademliaHandler, SourceNodeID []byte) {
-    log.Println("🔍 Starting find_value process...")
-    test_embedding := []float64{0.1, 0.2, 0.3, 0.4, 0.5}
-    threshold := 0.7
-    limit := 1
+	log.Println("🔍 Starting find_value process...")
+	test_embedding := []float64{0.1, 0.2, 0.3, 0.4, 0.5}
+	threshold := 0.7
+	limit := 1
 
-    // 1. Find the node ID of the peer storing the most similar embedding in our local DB
-    targetNodeIDs, err := kademliaHandler.Node().FindSimilar(test_embedding, threshold, limit)
-    if err != nil {
-        log.Printf("Error finding similar node: %v", err)
-        return
-    }
-    if len(targetNodeIDs) == 0 {
-        log.Println("Could not find any target node ID above the similarity threshold.")
-        return
-    }
-    TargetNodeID := targetNodeIDs[0].Key
-    log.Printf("Found target NodeID: %s", hex.EncodeToString(TargetNodeID))
+	// 1. Find the node ID of the peer storing the most similar embedding in our local DB
+	targetNodeIDs, err := kademliaHandler.Node().FindSimilar(test_embedding, threshold, limit)
+	if err != nil {
+		log.Printf("Error finding similar node: %v", err)
+		return
+	}
+	if len(targetNodeIDs) == 0 {
+		log.Println("Could not find any target node ID above the similarity threshold.")
+		return
+	}
+	TargetNodeID := targetNodeIDs[0].Key
+	log.Printf("Found target NodeID: %s", hex.EncodeToString(TargetNodeID))
 
-    // 2. Find the closest peer in our routing table to the target node ID
-    nextNode := kademliaHandler.Node().RoutingTable().FindClosest(TargetNodeID, limit)
-    if len(nextNode) == 0 {
-        log.Println("Could not find a peer in the routing table to forward the request to.")
-        return
-    }
-    nextPID := nextNode[0].PeerID
-    log.Printf("Found next hop PeerID: %s", nextPID)
+	// 2. Find the closest peer in our routing table to the target node ID
+	nextNode := kademliaHandler.Node().RoutingTable().FindClosest(TargetNodeID, limit)
+	if len(nextNode) == 0 {
+		log.Println("Could not find a peer in the routing table to forward the request to.")
+		return
+	}
+	nextPID := nextNode[0].PeerID
+	log.Printf("Found next hop PeerID: %s", nextPID)
 
 	SourceNodeIDEnc := hex.EncodeToString(SourceNodeID)
-    TargetNodeIDEnc := hex.EncodeToString(TargetNodeID)
+	TargetNodeIDEnc := hex.EncodeToString(TargetNodeID)
 	// 3. Build and send the request
-    params := models.EmbeddingSearchRequest{
-        Type:           "GET",
-        Route:          "find_value",
-        SourceNodeID:   SourceNodeIDEnc,
-        SourcePeerID:   p.Host.ID().String(),
-        TargetNodeID:   TargetNodeIDEnc,
-        ReceiverPeerID: nextPID,
-        QueryEmbed:      test_embedding,
-    }
+	params := models.EmbeddingSearchRequest{
+		Type:           "GET",
+		Route:          "find_value",
+		SourceNodeID:   SourceNodeIDEnc,
+		SourcePeerID:   p.Host.ID().String(),
+		TargetNodeID:   TargetNodeIDEnc,
+		ReceiverPeerID: nextPID,
+		QueryEmbed:     test_embedding,
+	}
 
-    found := false
-    for depth := 0; depth < 4 && !found; depth++ {
-        log.Printf("Find attempt %d: sending to PeerID %s", depth+1, nextPID)
+	found := false
+	depth := 1
+	for depth <= 4 {
+		log.Printf("Find attempt %d: sending to PeerID %s", depth+1, nextPID)
 
-        // The body for a find_value request can be empty
-        resp, err := helpers.SendJSON(p, ctx, nextPID, params, nil)
-        if err != nil {
-            log.Printf("Error sending find_value request: %v", err)
-            break
-        }
+		// The body for a find_value request can be empty
+		resp, err := helpers.SendJSON(p, ctx, nextPID, params, nil)
+		if err != nil {
+			log.Printf("Error sending find_value request: %v", err)
+			break
+		}
 
-        var respDec map[string]any
-        if err := json.Unmarshal(resp, &respDec); err != nil {
-            log.Printf("Error unmarshalling find_value response: %v", err)
-            break
-        }
-        log.Printf("Response (iteration %d): %+v", depth+1, respDec)
+		var respDec map[string]any
+		if err := json.Unmarshal(resp, &respDec); err != nil {
+			log.Printf("Error unmarshalling find_value response: %v", err)
+			break
+		}
+		log.Printf("Response (iteration %d): %+v", depth+1, respDec)
 
-        if wasFound, ok := respDec["Found"].(bool); ok && wasFound {
-            log.Printf("✅ Successfully found value: %v", respDec["Value"])
-            found = true
-            break
-        }
+		if wasFound, ok := respDec["Found"].(bool); ok && wasFound {
+			log.Printf("✅ Successfully found value: %v", respDec["Value"])
+			found = true
+			break
+			depth++
+		} else {
+			found = false
+		}
 
-        if next, ok := respDec["NextPeerID"].(string); ok && next != "" {
-            log.Printf("Not the target, next hop is %s", next)
-            nextPID = next
-            params.ReceiverPeerID = next
-        } else {
-            log.Println("Search failed and no next peer was provided. Aborting.")
-            break
-        }
-    }
-    if !found {
-        log.Println("⚠️ Find process finished without finding the value.")
-    }
+		if next, ok := respDec["NextPeerID"].(string); ok && next != "" {
+			log.Printf("Not the target, next hop is %s", next)
+			nextPID = next
+			params.ReceiverPeerID = next
+		} else {
+			log.Println("Search failed and no next peer was provided. Aborting.")
+			break
+		}
+
+	}
+	if !found {
+		log.Println("⚠️ Find process finished without finding the value.")
+	}
 }
 
 // func handleFindValueUser(p *models.UserPeer, ctx context.Context, kademliaHandler *integration.ComprehensiveKademliaHandler, SourceNodeID []byte) {
@@ -324,7 +327,7 @@ func handleFindValueUser(p *models.UserPeer, ctx context.Context, kademliaHandle
 // 			params.ReceiverPeerID = respDec["NextPeerID"].(string)
 // 		} else {
 // 			log.Println("Received empty response")
-// 			}		
+// 			}
 // 		if depth >=4 && found{
 // 			break
 // 		}
@@ -336,10 +339,11 @@ func handleStoreUser(p *models.UserPeer, ctx context.Context, kademliaHandler *i
 	test_embedding := []float64{0.15, 0.25, 0.35, 0.45, 0.55}
 	threshold := 0.7
 	limit := 1
+	maxDepth := 1 // will keep it as 1 for now. will change it to 4 in the future// Define max iterations
 
 	SourceNodeIDEnc := hex.EncodeToString(SourceNodeID)
 
-	// 1. Find the node ID of the peer storing the most similar embedding in our local DB
+	// 1. Find the node ID of the peer storing the most similar embedding
 	targetNodeIDs, err := kademliaHandler.Node().FindSimilar(test_embedding, threshold, limit)
 	if err != nil {
 		log.Printf("Error finding similar node: %v", err)
@@ -351,7 +355,6 @@ func handleStoreUser(p *models.UserPeer, ctx context.Context, kademliaHandler *i
 	}
 	TargetNodeID := targetNodeIDs[0].Key
 	TargetNodeIDEnc := hex.EncodeToString(TargetNodeID)
-	// log.Printf("Found target NodeID: %s", hex.EncodeToString(TargetNodeID))
 
 	// 2. Find the closest peer in our routing table to the target node ID
 	nextNode := kademliaHandler.Node().RoutingTable().FindClosest(TargetNodeID, limit)
@@ -360,9 +363,9 @@ func handleStoreUser(p *models.UserPeer, ctx context.Context, kademliaHandler *i
 		return
 	}
 	nextPID := nextNode[0].PeerID
-	log.Printf("Found next hop PeerID: %s", nextPID)
+	log.Printf("Found initial next hop PeerID: %s", nextPID)
 
-	// 3. Build and send the request
+	// 3. Build the initial request
 	params := models.EmbeddingSearchRequest{
 		Type:           "POST",
 		Route:          "store",
@@ -370,51 +373,56 @@ func handleStoreUser(p *models.UserPeer, ctx context.Context, kademliaHandler *i
 		SourcePeerID:   p.Host.ID().String(),
 		TargetNodeID:   TargetNodeIDEnc,
 		ReceiverPeerID: nextPID,
-		QueryEmbed: test_embedding,
+		QueryEmbed:     test_embedding,
 	}
 
-	depth := 1
 	found := false
-	for depth <= 4{
-		// Send the request again (simulate getting a new response)
+	for depth := 1; depth <= maxDepth; depth++ {
+		log.Printf("Store attempt %d: sending to PeerID %s", depth, nextPID)
+
+		// Build the request body for the current iteration
 		requestBody, newRoute := helpers.BuildKademliaStoreRequest(kademliaHandler, SourceNodeID, test_embedding, depth)
 		params.Route = newRoute
-		if found {
-			if outputMsg, ok := requestBody["output_message"].(map[string]interface{}); ok {
-				outputMsg["Found"] = true
-			}
-		}
 
 		resp, err := helpers.SendJSON(p, ctx, nextPID, params, requestBody)
 		if err != nil {
-			log.Printf("Error sending find_value request: %v", err)
+			log.Printf("Error sending store request: %v", err)
 			break
-		} else if len(resp) > 0 {
-			var respDec map[string]interface{}
-			json.Unmarshal(resp, &respDec)
-			log.Printf("Response (depth %d): %+v", depth, respDec)
+		}
 
-			// Check if 'found' is true in the response (customize as needed)
-			if val, ok := respDec["Found"].(bool); ok && val {
-				found = true
-				depth++;
-			}else {
-				found = false
-			}
-			params.ReceiverPeerID = respDec["NextPeerID"].(string)
-			nextPID = params.ReceiverPeerID
+		if len(resp) == 0 {
+			log.Println("Received empty response, aborting.")
+			break
+		}
+
+		var respDec map[string]interface{}
+		if err := json.Unmarshal(resp, &respDec); err != nil {
+			log.Printf("Error unmarshalling response: %v", err)
+			break
+		}
+		log.Printf("Response (iteration %d): %+v", depth, respDec)
+
+		// Check if the value was found
+		if wasFound, ok := respDec["Found"].(bool); ok && wasFound {
+			log.Println("✅ Store successful, value has been stored.")
+			found = true
+			break // Exit the loop since we are done
+		}
+
+		// If not found, get the next peer to contact
+		if next, ok := respDec["NextPeerID"].(string); ok && next != "" {
+			log.Printf("Not the final target, next hop is %s", next)
+			nextPID = next
+			params.ReceiverPeerID = next // Update for the next iteration
 		} else {
-			log.Println("Received empty response")
-			}	
-			
-			
-		if depth >=4 && found{
+			log.Println("Store process did not complete and no next peer was provided. Aborting.")
 			break
 		}
 	}
-	// while depth!=4 && found!=true keep getting responses
-	// we also have to ensure that the response being generated is being stored at each depth
 
+	if !found {
+		log.Println("⚠️ Store process finished without confirmation.")
+	}
 }
 
 // ---- Helpers ----
