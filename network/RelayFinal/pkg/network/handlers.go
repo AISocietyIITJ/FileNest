@@ -1,10 +1,15 @@
 package network
 
 import (
+	// "context"
 	"encoding/hex"
 	"encoding/json"
 	"final/backend/pkg/identity"
 	"final/backend/pkg/integration"
+	"fmt"
+
+	// "final/network/RelayFinal/pkg/network/helpers"
+	// "final/network/RelayFinal/pkg/relay/models"
 	_ "final/network/RelayFinal/pkg/relay/models"
 	"log"
 	"os"
@@ -91,24 +96,6 @@ func (nh *NetworkHandler) FindValueHandler(params map[string]any) []byte {
     return respJSON
 }
 
-// func FindValueHandler(params map[string]any) []byte {
-// 	log.Printf("params recv to FindValue is: %+v", params)
-// 	// add functionality for checking all params here
-
-// 	// pseudocode
-// 	// check if the targetnodeid is the same as the current nodeid
-// 	// if yes then find from database and give the new values
-// 	// else find the new values from the routing table
-
-	
-
-// 	reqJson, err := json.Marshal(params)
-// 	if(err != nil){
-// 		log.Printf("Error while marshalling in FindValueHandler: %+v", err.Error())
-// 	}
-// 	return reqJson
-// }
-
 func (nh *NetworkHandler) PingHandler(params map[string]any) []byte {
 	log.Printf("params recv to PingHandler is: %+v", params)
 	// add functionality for checking all params here
@@ -121,86 +108,62 @@ func (nh *NetworkHandler) PingHandler(params map[string]any) []byte {
 	return reqJson
 }
 
-// func (nh *NetworkHandler) StoreHandler(params map[string]any, body []byte) []byte {
-//     log.Printf("[StoreHandler] Received store request with params: %+v", params)
-
-//     // Here, you would extract the embedding from params and store the body.
-//     // For now, we'll just log it.
-//     // Example:
-//     // embedding, ok := params["Embedding"].([]any)
-//     // valueToStore := body
-
-//     // err := nh.Kademlia.Node().Store(embedding, valueToStore)
-//     // ... handle error ...
-
-//     log.Printf("[StoreHandler] Stored %d bytes of data.", len(body))
-
-//     // A real implementation would check if it needs to forward the store request,
-//     // similar to FindValue. For now, we send a simple success response.
-//     response := map[string]string{
-//         "status":  "success",
-//         "message": "data received",
-//     }
-//     respJSON, _ := json.Marshal(response)
-//     return respJSON
-// }
-
-func (nh *NetworkHandler) StoreHandler(params map[string]any, body []byte) []byte {
+func (nh *NetworkHandler) StoreHandler(params map[string]any, body map[string]any) []byte {
     log.Printf("[StoreHandler] Received store request with params: %+v", params)
 
-    targetNodeIDHex, ok := params["target_node_id"].(string)
-    if !ok {
-        log.Println("[StoreHandler] Error: TargetNodeID not found or not a string in params")
-        return nil
-    }
-
-    targetNodeID, err := hex.DecodeString(targetNodeIDHex)
-    if err != nil {
-        log.Printf("[StoreHandler] Error decoding TargetNodeID: %v", err)
-        return nil
-    }
+    targetNodeID := params["target_node_id"].(string)
 
     selfNodeID := nh.Kademlia.Node().NodeID
     response := make(map[string]any)
 
     // Check if the current node is the target for the store operation
-    if string(selfNodeID) == string(targetNodeID) {
-        log.Println("[StoreHandler] This node is the target. Storing value.")
+    
+    if(params["Found"].(bool)){
 
-        // The value to store is the body of the POST request.
-        // We'll assume the body contains the file path or identifier.
-        valueToStore := string(body)
-
-        // The key is the embedding associated with the data.
-        embedding, ok := params["embed"].([]any)
-        if !ok {
-            log.Println("[StoreHandler] Error: Embedding not found in params for store operation")
-            response["Stored"] = false
-            response["Message"] = "Embedding not provided"
-        } else {
-            floatEmbedding := make([]float64, len(embedding))
-            for i, v := range embedding {
-                floatEmbedding[i] = v.(float64)
-            }
-
-            // Use the Kademlia handler to store the key-value pair.
-            // The key is the embedding, and the value is the file path/data.
-            if err := nh.Kademlia.Node().StoreNodeEmbedding(selfNodeID, floatEmbedding); err != nil {
+        // case where we store value
+        if (params["depth"].(int) == 1){ // !!! must be 4 here
+            log.Println("[StoreHandler] This node is the target. Storing value.")
+    
+            // The key is the embedding associated with the data.
+            embedding := params["embed"].([]float64)
+            if err := nh.Kademlia.Node().StoreNodeEmbedding(selfNodeID, embedding); err != nil {
                 log.Printf("[StoreHandler] Error storing value in local storage: %v", err)
+                
                 response["Stored"] = false
                 response["Message"] = "Failed to store value"
             } else {
-                log.Printf("[StoreHandler] Successfully stored value: %s", valueToStore)
+                log.Printf("[StoreHandler] Successfully stored value: %v\n", embedding)
+                
                 response["Stored"] = true
                 response["Message"] = "Value stored successfully"
             }
-        }
-        response["NextPeerID"] = "" // This is the final destination.
+        } else { // case where we fwd to next depth
+            response["Stored"] = false
+            similarNodes, err := nh.Kademlia.Node().FindSimilar(params["embed"].([]float64), params["Threshold"].(float64), 1)
+            if err != nil {
+                response["Stored"] = false
+                response["Message"] = fmt.Sprintf("Error finding similar node: %v", err)
+                log.Printf("Error finding similar node: %v", err)
+            }
+            if len(similarNodes) == 0 {
+                response["Stored"] = false
+                response["Message"] = fmt.Sprintf("Error finding similar node: %v", err)
+                log.Println("Could not find any target node ID above the similarity threshold.")
+            }
 
+            similarNode := similarNodes[0]
+            response["NextNodeID"] = similarNode.Key
+            response["NextPeerID"] = "" // not req. its set in main.go handler
+        }
     } else {
+        // response["NextPeerID"] = params["SourcePeerID"].(string) // This is the final destination.
+        // response["NextNodeID"] = params["SourceNodeID"].(string)
+
         log.Println("[StoreHandler] This node is not the target. Finding closer peers.")
+
         // Find the closest peer in the routing table to forward the request to.
-        closestPeers := nh.Kademlia.Node().RoutingTable().FindClosest(targetNodeID, 1)
+        targetNodeIDHex, _ := hex.DecodeString(targetNodeID)
+        closestPeers := nh.Kademlia.Node().RoutingTable().FindClosest(targetNodeIDHex, 1)
         if len(closestPeers) == 0 {
             log.Println("[StoreHandler] Could not find any closer peer in the routing table.")
             response["Stored"] = false
@@ -213,7 +176,7 @@ func (nh *NetworkHandler) StoreHandler(params map[string]any, body []byte) []byt
             response["NextNodeID"] = hex.EncodeToString(nextPeer.NodeID)
         }
     }
-
+            
     respJSON, err := json.Marshal(response)
     if err != nil {
         log.Printf("[StoreHandler] Error marshalling response: %v", err)
@@ -221,6 +184,7 @@ func (nh *NetworkHandler) StoreHandler(params map[string]any, body []byte) []byt
     }
     return respJSON
 }
+
 
 func (nh *NetworkHandler) SendHandler(params map[string]any, bodyBytes []byte) []byte {
 	_, ok := params["Type"].(string)

@@ -90,7 +90,7 @@ func (rt *RoutingTable) Update(peer types.PeerInfo) {
 }
 
 // FindClosest returns count closest peers to target NodeID
-func (rt *RoutingTable) FindClosest(targetID []byte, count int) []types.PeerInfo {
+func (rt *RoutingTable) FindClosest(targetNodeID []byte, count int) []types.PeerInfo {
 	var allPeers []types.PeerInfo
 	for _, bucket := range rt.Buckets {
 		allPeers = append(allPeers, bucket...)
@@ -98,8 +98,8 @@ func (rt *RoutingTable) FindClosest(targetID []byte, count int) []types.PeerInfo
 
 	// Sort by XOR distance of NodeIDs
 	sort.Slice(allPeers, func(i, j int) bool {
-		distI := helpers.XORDistance(targetID, allPeers[i].NodeID)
-		distJ := helpers.XORDistance(targetID, allPeers[j].NodeID)
+		distI := helpers.XORDistance(targetNodeID, allPeers[i].NodeID)
+		distJ := helpers.XORDistance(targetNodeID, allPeers[j].NodeID)
 		return distI.Cmp(distJ) < 0
 	})
 

@@ -26,6 +26,8 @@ type EmbeddingSearchRequest struct {
 	Route        string    `json:"route"`
 	SourceNodeID string    `json:"source_id"`
 	SourcePeerID string    `json:"source_peer_id"`
+	NextNodeID string	   `json:"source_peer_id"`
+	NextPeerID string      `json:"source_peer_id"`
 	ReceiverPeerID string `json:"receiver_peer_id"`
 	QueryEmbed   []float64 `json:"embed"`
 	Depth        int       `json:"prev_depth"`
