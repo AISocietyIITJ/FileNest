@@ -65,7 +65,7 @@ func ServePostReq(paramsBytes []byte, bodyBytes []byte) []byte {
 		fmt.Println("[ERROR][ServePostReq] Failed to unmarshal params:", err)
 	}
 
-	switch params["route"] {
+	switch params["Route"] {
 	case "store":
 		fmt.Println("[DEBUG][ServePostReq] Handling route: store")
 		return NetHandler.StoreHandler(params, body)

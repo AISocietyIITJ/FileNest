@@ -111,7 +111,7 @@ func (nh *NetworkHandler) PingHandler(params map[string]any) []byte {
 func (nh *NetworkHandler) StoreHandler(params map[string]any, body map[string]any) []byte {
     log.Printf("[StoreHandler] Received store request with params: %+v", params)
 
-    targetNodeID := params["target_node_id"].(string)
+    targetNodeID := params["TargetNodeID"].(string)
 
     selfNodeID := nh.Kademlia.Node().NodeID
     response := make(map[string]any)
@@ -121,11 +121,11 @@ func (nh *NetworkHandler) StoreHandler(params map[string]any, body map[string]an
     if(params["Found"].(bool)){
 
         // case where we store value
-        if (params["depth"].(int) == 1){ // !!! must be 4 here
+        if (params["Depth"].(int) == 1){ // !!! must be 4 here
             log.Println("[StoreHandler] This node is the target. Storing value.")
     
             // The key is the embedding associated with the data.
-            embedding := params["embed"].([]float64)
+            embedding := params["Embed"].([]float64)
             if err := nh.Kademlia.Node().StoreNodeEmbedding(selfNodeID, embedding); err != nil {
                 log.Printf("[StoreHandler] Error storing value in local storage: %v", err)
                 
