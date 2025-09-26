@@ -122,7 +122,7 @@ func main() {
 		}
 	}
 
-	embed := []float64{0.1, 0.2, 0.3, 0.4, 0.6}
+	embed := []float64{0.15, 0.25, 0.35, 0.45, 0.5}
 	if err = relayhelper.UpsertNode(decSelfNodeID, p.Host.ID().String(), embed); err != nil {
 		log.Printf("Error in upserting node to mongo: %v \n", err.Error())
 	} else {
@@ -234,7 +234,7 @@ func handleFindValueUser(p *models.UserPeer, ctx context.Context, kademliaHandle
 		}
 		log.Printf("Response (iteration %d): %+v", depth+1, respDec)
 
-		if wasFound, ok := respDec["Found"].(bool); ok && wasFound {
+		if wasFound, ok := respDec["found"].(bool); ok && wasFound {
 			log.Printf("✅ Successfully found value: %v", respDec["Value"])
 			found = true
 			depth++
@@ -275,6 +275,7 @@ func handleStoreUser(p *models.UserPeer, ctx context.Context, kademliaHandler *i
 		// TargetNodeID:   TargetNodeIDEnc,
 		// ReceiverPeerID: nextPID,
 		QueryEmbed:     test_embedding,
+		Found: false,
 	}
 
 	// 1. Find the node ID of the bootstrap peer storing the most similar embedding. only when found == true
@@ -334,7 +335,7 @@ func handleStoreUser(p *models.UserPeer, ctx context.Context, kademliaHandler *i
 		log.Printf("Response (iteration %d): %+v", depth, respDec)
 		
 
-		if (respDec["Found"].(bool)){
+		if (respDec["found"].(bool)){
 			params.TargetNodeID = respDec["NextNodeID"].(string)
 			depth++
 		}

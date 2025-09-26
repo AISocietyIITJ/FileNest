@@ -64,10 +64,10 @@ func (nh *NetworkHandler) FindValueHandler(params map[string]any) []byte {
         similarNodes, err := nh.Kademlia.Node().FindSimilar(floatEmbedding, 0.9, 1)
         if err != nil || len(similarNodes) == 0 {
             log.Printf("Could not find value locally, though this is the target node. Err: %v", err)
-            response["Found"] = false
+            response["found"] = false
         } else {
-            log.Println("Found value in local storage.")
-            response["Found"] = true
+            log.Println("found value in local storage.")
+            response["found"] = true
             response["Value"] = "path/to/your/file.dat" // placeholder
         }
         response["NextPeerID"] = ""
@@ -77,12 +77,12 @@ func (nh *NetworkHandler) FindValueHandler(params map[string]any) []byte {
         closestPeers := nh.Kademlia.Node().RoutingTable().FindClosest(targetNodeID, 1)
         if len(closestPeers) == 0 {
             log.Println("Could not find any closer peer in the routing table.")
-            response["Found"] = false
+            response["found"] = false
             response["NextPeerID"] = ""
         } else {
             nextPeer := closestPeers[0]
-            log.Printf("Found closer peer: %s", nextPeer.PeerID)
-            response["Found"] = false
+            log.Printf("found closer peer: %s", nextPeer.PeerID)
+            response["found"] = false
             response["NextPeerID"] = nextPeer.PeerID
             response["NextNodeID"] = hex.EncodeToString(nextPeer.NodeID)
         }
@@ -118,7 +118,7 @@ func (nh *NetworkHandler) StoreHandler(params map[string]any, body map[string]an
 
     // Check if the current node is the target for the store operation
     
-    if(params["Found"].(bool)){
+    if(params["found"].(bool)){
 
         // case where we store value
         if (params["Depth"].(int) == 1){ // !!! must be 4 here
@@ -170,7 +170,7 @@ func (nh *NetworkHandler) StoreHandler(params map[string]any, body map[string]an
             response["next_peer_id"] = ""
         } else {
             nextPeer := closestPeers[0]
-            log.Printf("[StoreHandler] Found closer peer: %s", nextPeer.PeerID)
+            log.Printf("[StoreHandler] found closer peer: %s", nextPeer.PeerID)
             response["Stored"] = false
             response["next_peer_id"] = nextPeer.PeerID
             response["next_node_id"] = hex.EncodeToString(nextPeer.NodeID)
