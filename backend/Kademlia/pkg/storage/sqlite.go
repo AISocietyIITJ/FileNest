@@ -46,7 +46,7 @@ func (s *SQLiteStorage) FindSimilar(queryEmbed []float64, threshold float64, lim
 	// Calculate similarity for each stored embedding
 	for _, ne := range nodeEmbeddings {
 		similarity, _ := cosineSimilarity(queryEmbed, []float64(ne.Embedding))
-
+		log.Printf("Found NodeEMbed in rt: %+v\n", ne)
 		// Only include embeddings that meet the threshold
 		if similarity >= threshold{
 			results = append(results, EmbeddingResult{

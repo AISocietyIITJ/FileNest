@@ -111,8 +111,8 @@ func (nh *NetworkHandler) PingHandler(params map[string]any) []byte {
 func (nh *NetworkHandler) StoreHandler(params map[string]any, body map[string]any) []byte {
     log.Printf("[StoreHandler] Received store request with params: %+v", params)
 
-    targetNodeID := params["TargetNodeID"].(string)
-
+    targetNodeID := params["target_node_id"].(string)
+    log.Printf("TargetNodeID in STOREHANDLER: %+v", targetNodeID)
     selfNodeID := nh.Kademlia.Node().NodeID
     response := make(map[string]any)
 
@@ -152,8 +152,8 @@ func (nh *NetworkHandler) StoreHandler(params map[string]any, body map[string]an
             }
 
             similarNode := similarNodes[0]
-            response["NextNodeID"] = similarNode.Key
-            response["NextPeerID"] = "" // not req. its set in main.go handler
+            response["next_node_id"] = similarNode.Key
+            response["next_peer_id"] = "" // not req. its set in main.go handler
         }
     } else {
         // response["NextPeerID"] = params["SourcePeerID"].(string) // This is the final destination.
@@ -167,13 +167,13 @@ func (nh *NetworkHandler) StoreHandler(params map[string]any, body map[string]an
         if len(closestPeers) == 0 {
             log.Println("[StoreHandler] Could not find any closer peer in the routing table.")
             response["Stored"] = false
-            response["NextPeerID"] = ""
+            response["next_peer_id"] = ""
         } else {
             nextPeer := closestPeers[0]
             log.Printf("[StoreHandler] Found closer peer: %s", nextPeer.PeerID)
             response["Stored"] = false
-            response["NextPeerID"] = nextPeer.PeerID
-            response["NextNodeID"] = hex.EncodeToString(nextPeer.NodeID)
+            response["next_peer_id"] = nextPeer.PeerID
+            response["next_node_id"] = hex.EncodeToString(nextPeer.NodeID)
         }
     }
             

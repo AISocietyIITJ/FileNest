@@ -24,10 +24,10 @@ type ReqFormat struct {
 
 type EmbeddingSearchRequest struct {
 	Route        string    `json:"route"`
-	SourceNodeID string    `json:"source_id"`
+	SourceNodeID string    `json:"source_node_id"`
 	SourcePeerID string    `json:"source_peer_id"`
-	NextNodeID string	   `json:"source_peer_id"`
-	NextPeerID string      `json:"source_peer_id"`
+	NextNodeID string	   `json:"next_node_id"`
+	NextPeerID string      `json:"next_peer_id"`
 	ReceiverPeerID string `json:"receiver_peer_id"`
 	QueryEmbed   []float64 `json:"embed"`
 	Depth        int       `json:"prev_depth"`
@@ -35,6 +35,7 @@ type EmbeddingSearchRequest struct {
 	Threshold    float64   `json:"threshold"`
 	ResultsCount int       `json:"results_count"`
 	TargetNodeID string    `json:"target_node_id"`
+	Found bool `json:"found"`
 }
 
 type EmbeddingSearchResponse struct {
