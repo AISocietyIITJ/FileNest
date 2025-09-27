@@ -64,6 +64,35 @@ func (k *KademliaNode) GetAddress() string {
 	return k.PeerID
 }
 
+func (k *KademliaNode) CosineSimilarity(a, b []float64) (float64, error) {
+	if len(a) != len(b) {
+		return 0, fmt.Errorf("embedding dimensions don't match: %d != %d", len(a), len(b))
+	}
+
+	if len(a) == 0 {
+		return 0, fmt.Errorf("empty embedding vectors")
+	}
+
+	var dotProduct, normA, normB float64
+
+	// Calculate dot product and norms in one pass
+	for i := range a {
+		dotProduct += a[i] * b[i]
+		normA += a[i] * a[i]
+		normB += b[i] * b[i]
+	}
+
+	// Handle zero vectors
+	if normA == 0 || normB == 0 {
+		return 0.0, nil
+	}
+
+	// Calculate cosine similarity
+	similarity := dotProduct / (math.Sqrt(normA) * math.Sqrt(normB))
+
+	return similarity, nil
+}
+
 // PrintRoutingTable displays the node's routing table
 func (k *KademliaNode) PrintRoutingTable() {
 	fmt.Printf("\n=== ROUTING TABLE FOR NODE %x ===\n", k.NodeID[:8])

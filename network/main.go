@@ -122,7 +122,7 @@ func main() {
 		}
 	}
 
-	embed := []float64{0.15, 0.25, 0.35, 0.45, 0.5}
+	embed := []float64{0.0, 0.1, 0.0, 0.6, 0.9}
 	if err = relayhelper.UpsertNode(decSelfNodeID, p.Host.ID().String(), embed); err != nil {
 		log.Printf("Error in upserting node to mongo: %v \n", err.Error())
 	} else {
