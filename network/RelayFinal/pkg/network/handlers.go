@@ -138,6 +138,7 @@ func (nh *NetworkHandler) StoreHandler(params map[string]any, body map[string]an
                 response["Message"] = "Value stored successfully"
             }
         } else { // case where we fwd to next depth
+            response["found"] = false
             response["Stored"] = false
             similarNodes, err := nh.Kademlia.Node().FindSimilar(params["embed"].([]float64), params["Threshold"].(float64), 1)
             if err != nil {
