@@ -121,11 +121,11 @@ func (nh *NetworkHandler) StoreHandler(params map[string]any, body map[string]an
     if(params["found"].(bool)){
 
         // case where we store value
-        if (params["Depth"].(int) == 1){ // !!! must be 4 here
+        if (params["depth"].(int) == 1){ // !!! must be 4 here
             log.Println("[StoreHandler] This node is the target. Storing value.")
-    
+            response["found"] = true
             // The key is the embedding associated with the data.
-            embedding := params["Embed"].([]float64)
+            embedding := params["embed"].([]float64)
             if err := nh.Kademlia.Node().StoreNodeEmbedding(selfNodeID, embedding); err != nil {
                 log.Printf("[StoreHandler] Error storing value in local storage: %v", err)
                 
