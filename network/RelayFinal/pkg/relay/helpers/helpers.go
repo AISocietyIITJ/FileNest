@@ -121,7 +121,7 @@ func UpsertNode(nodeid string, peerid string, embed []float64) error {
     return nil
 }
 
-func GetAllPeers() ([]PeerDoc, error) {
+func GetAllPeersFromMongo() ([]PeerDoc, error) {
     godotenv.Load(".env")
     uri := os.Getenv("MONGO_URI")
     client, err := SetupMongo(uri)

@@ -4,11 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"final/backend/pkg/integration"
+	"final/backend/pkg/types"
 	genmodels "final/network/RelayFinal/pkg/generalpeer/models"
 	"final/network/RelayFinal/pkg/relay/models"
 	"final/network/RelayFinal/pkg/relay/peer"
 	"fmt"
 	"log"
+	"math/big"
+	"sort"
 	"strings"
 	"time"
 )
@@ -37,6 +40,28 @@ func ParseBootstrapFlags(nodeidHex, pid string) ([]IDs, error) {
 		ids[i] = IDs{PeerID: peerIDs[i], NodeID: nodeIDs[i]}
 	}
 	return ids, nil
+}
+
+func SortPeersByDistance(shortlist []types.PeerInfo, targetNodeID []byte) {
+	// Sorts the shortlist slice in-place by XOR distance to targetNodeID (ascending)
+	sort.Slice(shortlist, func(i, j int) bool {
+		distI := xorDistance(shortlist[i].NodeID, targetNodeID)
+		distJ := xorDistance(shortlist[j].NodeID, targetNodeID)
+		return distI.Cmp(distJ) < 0
+	})
+}
+
+// xorDistance returns the XOR distance between two node IDs as a big.Int
+func xorDistance(a, b []byte) *big.Int {
+	n := len(a)
+	if len(b) < n {
+		n = len(b)
+	}
+	xor := make([]byte, n)
+	for i := 0; i < n; i++ {
+		xor[i] = a[i] ^ b[i]
+	}
+	return new(big.Int).SetBytes(xor)
 }
 
 func BuildKademliaFindValueRequest(handler *integration.ComprehensiveKademliaHandler, nodeidBytes []byte, embedding []float64, depth int) (map[string]interface{}, string) {

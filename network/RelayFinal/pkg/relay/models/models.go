@@ -40,12 +40,14 @@ type EmbeddingSearchRequest struct {
 
 type EmbeddingSearchResponse struct {
 	Type         string    `json:"type"`
+	Message string `json:"message"`
 	QueryEmbed   []float64 `json:"query_embed"`
 	Depth        int       `json:"depth"`
 	SourceNodeID []byte    `json:"source_node_id"`
 	SourcePeerID string    `json:"source_peer_id"`
 	NextPeerID   string    `json:"next_peer_id"`
 	Found        bool      `json:"found"`
+	Pruned bool `json:"pruned"`
 	FileEmbed    []float64 `json:"file_embed"`
 }
 
@@ -68,8 +70,11 @@ type PingResponse struct {
 
 // sent to kademlia node
 type FindNodeRequest struct {
+	Type           string `json:"type"`
+	Route          string `json:"route"`
 	SenderNodeID []byte `json:"sender_node_id"`
 	SenderPeerID string `json:"sender_peer_id"`
+	RecieverNodeID []byte `json:"receiver_id"`
 	TargetID     []byte `json:"target_id"` // The NodeID we want to reach
 	Timestamp    int64  `json:"timestamp"`
 }

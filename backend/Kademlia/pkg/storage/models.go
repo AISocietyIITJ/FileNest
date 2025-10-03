@@ -30,13 +30,14 @@ func (e *EmbeddingVector) Scan(value interface{}) error {
 }
 
 // Database model
-type NodeEmbedding struct {
+type D1TVMap struct {
     ID        uint            `gorm:"primaryKey" json:"id"`
     NodeID    []byte          `gorm:"column:node_id;not null" json:"node_id"`
+    PeerID    string           `gorm:"column:peer_id;not null" json:"peer_id"`
     Embedding EmbeddingVector `gorm:"column:embedding;type:text;not null" json:"embedding"`
 }
 
 // Table name
-func (NodeEmbedding) TableName() string {
+func (D1TVMap) TableName() string {
     return "node_embeddings"
 }

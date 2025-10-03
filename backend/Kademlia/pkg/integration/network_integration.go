@@ -99,7 +99,7 @@ func (nis *NetworkIntegrationService) findNextNodeBySimilarity(request *types.Em
 		if similarity > maxSimilarity {
 			maxSimilarity = similarity
 			bestMatch = &EmbeddingResult{
-				NodeID:     stored.Key,
+				NodeID:     stored.NodeID,
 				Embedding:  stored.Embedding,
 				Similarity: similarity,
 			}
@@ -304,35 +304,9 @@ func (ckh *ComprehensiveKademliaHandler) ProcessEmbeddingRequestWrapper(
 	return ckh.networkService.ProcessEmbeddingRequest(request)
 }
 
-// HandleIncomingEmbeddingSearch - Handle incoming embedding search requests
-func (ckh *ComprehensiveKademliaHandler) HandleIncomingEmbeddingSearch(request *types.EmbeddingSearchRequest) (*types.EmbeddingSearchResponse, error) {
-	if !ckh.isInitialized {
-		return nil, fmt.Errorf("node not initialized")
-	}
-
-	return ckh.node.HandleEmbeddingSearch(request)
-}
-
-// HandleIncomingFindNode - Handle incoming find node requests
-func (ckh *ComprehensiveKademliaHandler) HandleIncomingFindNode(request *types.FindNodeRequest) (*types.FindNodeResponse, error) {
-	if !ckh.isInitialized {
-		return nil, fmt.Errorf("node not initialized")
-	}
-
-	return ckh.node.HandleFindNode(request)
-}
-
-// HandleIncomingPing - Handle incoming ping requests
-func (ckh *ComprehensiveKademliaHandler) HandleIncomingPing(request *types.PingRequest) (*types.PingResponse, error) {
-	if !ckh.isInitialized {
-		return nil, fmt.Errorf("node not initialized")
-	}
-
-	return ckh.node.HandlePing(request)
-}
 
 // StoreEmbedding - Store an embedding using []byte node ID
-func (ckh *ComprehensiveKademliaHandler) StoreEmbedding(targetNodeID []byte, embedding []float64) error {
+func (ckh *ComprehensiveKademliaHandler) StoreEmbedding(targetNodeID []byte, peerID string,embedding []float64) error {
 	if !ckh.isInitialized {
 		return fmt.Errorf("node not initialized")
 	}
@@ -340,31 +314,9 @@ func (ckh *ComprehensiveKademliaHandler) StoreEmbedding(targetNodeID []byte, emb
 	log.Printf("[StoreEmbedding] NodeID length: %d", len(targetNodeID))
 
 	// ✅ Direct use - no conversion
-	return ckh.node.StoreNodeEmbedding(targetNodeID, embedding)
+	return ckh.node.StoreNodeEmbedding(targetNodeID, peerID, embedding)
 }
 
-// CompleteEmbeddingLookup - Perform complete embedding lookup
-func (ckh *ComprehensiveKademliaHandler) CompleteEmbeddingLookup(queryEmbed []float64) (*types.EmbeddingSearchResponse, error) {
-	if !ckh.isInitialized {
-		return nil, fmt.Errorf("node not initialized")
-	}
-
-	log.Printf("[CompleteEmbeddingLookup] NodeID length: %d", len(ckh.node.GetID()))
-
-	return ckh.node.CompleteEmbeddingLookup(queryEmbed)
-}
-
-// IterativeFindNode - Perform iterative find node lookup using []byte
-func (ckh *ComprehensiveKademliaHandler) IterativeFindNode(targetNodeID []byte) (*types.FindNodeResponse, error) {
-	if !ckh.isInitialized {
-		return nil, fmt.Errorf("node not initialized")
-	}
-
-	log.Printf("[IterativeFindNode] NodeID length: %d", len(ckh.node.GetID()))
-
-	// ✅ Direct use - no conversion
-	return ckh.node.IterativeFindNode(targetNodeID)
-}
 
 // GetNodeStatistics - Get node statistics
 func (ckh *ComprehensiveKademliaHandler) GetNodeStatistics() map[string]interface{} {
@@ -427,69 +379,4 @@ func (ckh *ComprehensiveKademliaHandler) GetRoutingInfo() []types.PeerInfo {
 	}
 
 	return routingTable.GetNodes()
-}
-
-// ========== ADDITIONAL BATCH AND VALIDATION FUNCTIONS ==========
-
-// ProcessBatchEmbeddingRequests processes multiple embedding requests
-func (nis *NetworkIntegrationService) ProcessBatchEmbeddingRequests(requests []*types.EmbeddingSearchRequest) ([]*types.EmbeddingSearchResponse, error) {
-	responses := make([]*types.EmbeddingSearchResponse, 0, len(requests))
-
-	for i, request := range requests {
-		log.Printf("Processing batch request %d/%d", i+1, len(requests))
-
-		response, err := nis.ProcessEmbeddingRequest(request)
-		if err != nil {
-			log.Printf("Batch request %d failed: %v", i+1, err)
-			errorResponse := &types.EmbeddingSearchResponse{
-				QueryType:    "batch_error",
-				QueryEmbed:   request.QueryEmbed,
-				Depth:        request.Depth,
-				SourceNodeID: nis.kademliaNode.GetID(),
-				SourcePeerID: nis.kademliaNode.GetAddress(),
-				Found:        false,
-				NextNodeID:   nil,
-				FileEmbed:    nil,
-			}
-			responses = append(responses, errorResponse)
-		} else {
-			responses = append(responses, response)
-		}
-	}
-
-	return responses, nil
-}
-
-// GetNetworkIntegrationStats returns statistics about network integration
-func (nis *NetworkIntegrationService) GetNetworkIntegrationStats() map[string]interface{} {
-	rt := nis.kademliaNode.RoutingTable()
-	return map[string]interface{}{
-		"peer_id":        nis.hostPeerID.String(),
-		"node_id":        fmt.Sprintf("%x", nis.kademliaNode.GetID()[:8]),
-		"current_depth":  nis.currentDepth,
-		"contacts_count": len(rt.FindClosest(nis.kademliaNode.GetID(), rt.K)),
-		"timestamp":      time.Now().Unix(),
-		"is_d4_node":     nis.currentDepth >= 4,
-	}
-}
-
-// ValidateEmbeddingRequest validates incoming embedding requests
-func (nis *NetworkIntegrationService) ValidateEmbeddingRequest(request *types.EmbeddingSearchRequest) error {
-	if len(request.TargetNodeID) == 0 {
-		return fmt.Errorf("target node ID cannot be empty")
-	}
-
-	if len(request.QueryEmbed) == 0 {
-		return fmt.Errorf("embedding vector cannot be empty")
-	}
-
-	if request.QueryType == "" {
-		return fmt.Errorf("query type cannot be empty")
-	}
-
-	if request.Threshold < 0 || request.Threshold > 1 {
-		return fmt.Errorf("threshold must be between 0 and 1")
-	}
-
-	return nil
 }

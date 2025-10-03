@@ -21,8 +21,8 @@ func NewSQLiteStorage(dbPath string) (*SQLiteStorage, error) {
 		return nil, err
 	}
 
-	// Auto migrate the schema - now using local NodeEmbedding struct
-	err = db.AutoMigrate(&NodeEmbedding{})
+	// Auto migrate the schema - now using local D1TVMap struct
+	err = db.AutoMigrate(&D1TVMap{})
 	if err != nil {
 		return nil, err
 	}
@@ -32,8 +32,9 @@ func NewSQLiteStorage(dbPath string) (*SQLiteStorage, error) {
 	}, nil
 }
 
+// Find embed map nodes similar to query embed
 func (s *SQLiteStorage) FindSimilar(queryEmbed []float64, threshold float64, limit int) ([]EmbeddingResult, error) {
-	var nodeEmbeddings []NodeEmbedding
+	var nodeEmbeddings []D1TVMap
 
 	// Get all embeddings from database
 	result := s.db.Find(&nodeEmbeddings)
@@ -46,11 +47,12 @@ func (s *SQLiteStorage) FindSimilar(queryEmbed []float64, threshold float64, lim
 	// Calculate similarity for each stored embedding
 	for _, ne := range nodeEmbeddings {
 		similarity, _ := cosineSimilarity(queryEmbed, []float64(ne.Embedding))
-		log.Printf("Found NodeEMbed in rt: %+v\n", ne)
+		log.Printf("Found NodeEmbed in rt: %+v\n", ne)
 		// Only include embeddings that meet the threshold
 		if similarity >= threshold{
 			results = append(results, EmbeddingResult{
-				Key:        ne.NodeID,
+				NodeID:        ne.NodeID,
+				PeerID: ne.PeerID,
 				Embedding:  []float64(ne.Embedding),
 				Similarity: similarity,
 			})
@@ -78,13 +80,14 @@ func (s *SQLiteStorage) Close() error {
 	return sqlDB.Close()
 }
 
-func (s *SQLiteStorage) StoreNodeEmbedding(nodeID []byte, embeddingVec []float64) error {
+func (s *SQLiteStorage) StoreNodeEmbedding(nodeID []byte, peerID string, embeddingVec []float64) error {
     if len(nodeID) != 20 {
         return fmt.Errorf("nodeID must be 20 bytes (160 bits), got %d", len(nodeID))
     }
 
-    nodeEmbedding := NodeEmbedding{
+    nodeEmbedding := D1TVMap{
         NodeID:    nodeID,
+		PeerID: peerID,
         Embedding: EmbeddingVector(embeddingVec),
     }
 

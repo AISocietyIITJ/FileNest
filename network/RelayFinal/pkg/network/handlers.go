@@ -6,11 +6,10 @@ import (
 	"encoding/json"
 	"final/backend/pkg/identity"
 	"final/backend/pkg/integration"
-	"fmt"
 
 	// "final/network/RelayFinal/pkg/network/helpers"
 	// "final/network/RelayFinal/pkg/relay/models"
-	_ "final/network/RelayFinal/pkg/relay/models"
+	"final/network/RelayFinal/pkg/relay/models"
 	"log"
 	"os"
 )
@@ -22,6 +21,39 @@ type NetworkHandler struct {
 
 func NewNetworkHandler(kademlia *integration.ComprehensiveKademliaHandler) *NetworkHandler {
     return &NetworkHandler{Kademlia: kademlia}
+}
+
+func (nh *NetworkHandler) FindNodeHandler(params map[string]any) []byte {
+    log.Printf("[FindNodeHandler] Received find_node request with params: %+v", params)
+
+    // Unmarshal the generic map into a structured request for type safety.
+    jsonBytes, err := json.Marshal(params)
+    if err != nil {
+        log.Printf("[FindNodeHandler] Error marshalling params: %v", err)
+        return nil
+    }
+
+    var req models.FindNodeRequest
+    if err := json.Unmarshal(jsonBytes, &req); err != nil {
+        log.Printf("[FindNodeHandler] Error unmarshalling request: %v", err)
+        return nil
+    }
+
+    // Find k closest peers in own RT
+    closestPeers := nh.Kademlia.Node().RoutingTable().FindClosest(req.TargetID, 20)
+    if len(closestPeers) == 0 {
+        log.Println("[FindNodeHandler] Could not find any peers in the routing table.")
+    }
+
+    log.Printf("[FindNodeHandler] Found %d closer peers.", len(closestPeers))
+
+    // Marshal the list of peers and send it back as the response.
+    respJSON, err := json.Marshal(closestPeers)
+    if err != nil {
+        log.Printf("[FindNodeHandler] Error marshalling response: %v", err)
+        return nil
+    }
+    return respJSON
 }
 
 func (nh *NetworkHandler) FindValueHandler(params map[string]any) []byte {
@@ -108,75 +140,56 @@ func (nh *NetworkHandler) PingHandler(params map[string]any) []byte {
 	return reqJson
 }
 
-func (nh *NetworkHandler) StoreHandler(params map[string]any, body map[string]any) []byte {
+// type EmbeddingSearchRequest struct {
+// 	Route        string    `json:"route"`
+// 	SourceNodeID string    `json:"source_node_id"`
+// 	SourcePeerID string    `json:"source_peer_id"`
+// 	NextNodeID string	   `json:"next_node_id"`
+// 	NextPeerID string      `json:"next_peer_id"`
+// 	ReceiverPeerID string `json:"receiver_peer_id"`
+// 	QueryEmbed   []float64 `json:"embed"`
+// 	Depth        int       `json:"prev_depth"`
+// 	Type         string    `json:"type"`
+// 	Threshold    float64   `json:"threshold"`
+// 	ResultsCount int       `json:"results_count"`
+// 	TargetNodeID string    `json:"target_node_id"`
+// 	Found bool `json:"found"`
+// }
+
+
+func (nh *NetworkHandler) StoreHandler(params []byte, body map[string]any) []byte {
     log.Printf("[StoreHandler] Received store request with params: %+v", params)
-
-    targetNodeID := params["target_node_id"].(string)
-    log.Printf("TargetNodeID in STOREHANDLER: %+v", targetNodeID)
+    response := models.EmbeddingSearchResponse{}
     selfNodeID := nh.Kademlia.Node().NodeID
-    response := make(map[string]any)
-
-    // Check if the current node is the target for the store operation
     
-    if(params["found"].(bool)){
-
-        // case where we store value
-        if (params["depth"].(int) == 1){ // !!! must be 4 here
-            log.Println("[StoreHandler] This node is the target. Storing value.")
-            response["found"] = true
-            // The key is the embedding associated with the data.
-            embedding := params["embed"].([]float64)
-            if err := nh.Kademlia.Node().StoreNodeEmbedding(selfNodeID, embedding); err != nil {
-                log.Printf("[StoreHandler] Error storing value in local storage: %v", err)
-                
-                response["found"] = false
-                response["Message"] = "Failed to store value"
-            } else {
-                log.Printf("[StoreHandler] Successfully stored value: %v\n", embedding)
-                
-                response["found"] = true
-                response["Message"] = "Value stored successfully"
-            }
-        } else { // case where we fwd to next depth
-            response["found"] = false
-            similarNodes, err := nh.Kademlia.Node().FindSimilar(params["embed"].([]float64), params["Threshold"].(float64), 1)
-            if err != nil {
-                response["found"] = false
-                response["Message"] = fmt.Sprintf("Error finding similar node: %v", err)
-                log.Printf("Error finding similar node: %v", err)
-            }
-            if len(similarNodes) == 0 {
-                response["found"] = false
-                response["Message"] = fmt.Sprintf("Error finding similar node: %v", err)
-                log.Println("Could not find any target node ID above the similarity threshold.")
-            }
-
-            similarNode := similarNodes[0]
-            response["next_node_id"] = similarNode.Key
-            response["next_peer_id"] = "" // not req. its set in main.go handler
-        }
-    } else {
-        // response["NextPeerID"] = params["SourcePeerID"].(string) // This is the final destination.
-        // response["NextNodeID"] = params["SourceNodeID"].(string)
-
-        log.Println("[StoreHandler] This node is not the target. Finding closer peers.")
-
-        // Find the closest peer in the routing table to forward the request to.
-        targetNodeIDHex, _ := hex.DecodeString(targetNodeID)
-        closestPeers := nh.Kademlia.Node().RoutingTable().FindClosest(targetNodeIDHex, 1)
-        if len(closestPeers) == 0 {
-            log.Println("[StoreHandler] Could not find any closer peer in the routing table.")
-            response["found"] = false
-            response["next_peer_id"] = ""
-        } else {
-            nextPeer := closestPeers[0]
-            log.Printf("[StoreHandler] found closer peer: %s", nextPeer.PeerID)
-            response["found"] = false
-            response["next_peer_id"] = nextPeer.PeerID
-            response["next_node_id"] = hex.EncodeToString(nextPeer.NodeID)
-        }
+    request := models.EmbeddingSearchRequest{}
+    json.Unmarshal(params, &request)
+    
+    nextNodeID := request.NextNodeID
+    nextPeerID := request.NextPeerID
+    thres := request.Threshold
+    // Check D2TV DB for most similar D2TVs indexed
+    cmpRes, err := nh.Kademlia.Node().FindSimilar(request.QueryEmbed, thres, 1)
+    if(err != nil){
+        log.Printf("[StoreHandler] Error in FindSimilar: %v", err)
+        return nil
     }
-            
+
+    if(len(cmpRes) == 0){
+        response.Message = "Pruning this lookup, no suitable cluster found."
+        response.Pruned = true
+        response.Found = false
+
+        respJSON, err := json.Marshal(response)
+        if err != nil {
+            log.Printf("[StoreHandler] Error marshalling response after pruning: %v", err)
+            return nil
+        }
+        return respJSON
+    }
+
+    
+    
     respJSON, err := json.Marshal(response)
     if err != nil {
         log.Printf("[StoreHandler] Error marshalling response: %v", err)

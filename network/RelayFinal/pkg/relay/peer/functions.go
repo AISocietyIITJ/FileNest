@@ -68,7 +68,7 @@ func ServePostReq(paramsBytes []byte, bodyBytes []byte) []byte {
 	switch params["route"] {
 	case "store":
 		fmt.Println("[DEBUG][ServePostReq] Handling route: store")
-		return NetHandler.StoreHandler(params, body)
+		return NetHandler.StoreHandler(paramsBytes, body)
 	default:
 		fmt.Println("[WARN][ServePostReq] Unknown POST route:", params["route"])
 	}
