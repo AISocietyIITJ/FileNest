@@ -5,8 +5,9 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"final/backend/pkg/identity"
-	"final/backend/pkg/integration"
-	"fmt"
+    "final/backend/pkg/integration"
+    "final/backend/pkg/storage"
+    "fmt"
 
 	// "final/network/RelayFinal/pkg/network/helpers"
 	// "final/network/RelayFinal/pkg/relay/models"
@@ -171,7 +172,15 @@ func (nh *NetworkHandler) StoreHandler(params []byte, body map[string]any) []byt
     // Store on own DB, base case
     if(request.Depth == 4){
         response.Found = true
-        // Return most similar files in D4 DB here. TBA
+        // Store most similar files in D4 DB here. TBA
+        err := nh.Kademlia.Node().finalfiles.StoreNodeEmbedding([]byte(request.SourceNodeID), request.SourcePeerID, request.FileEmbed) //need to pass the params here
+        if err!=nil{
+            log.Printf("[StoreHandler] Could not store the D4 file embed\n")
+        }
+        serr := nh.Kademlia.Node().finalfiles.UpdateConfig(4, "D4Config.json")
+        if serr!=nil{
+            log.Printf("[StoreHandler] Config file could not be updated while storing at D4: %v", serr)
+        }
         response.Pruned = false
         response.Message = "Stored file on last depth"
         response.QueryEmbed = request.QueryEmbed
@@ -190,11 +199,58 @@ func (nh *NetworkHandler) StoreHandler(params []byte, body map[string]any) []byt
 
     // Not depth 4, keep iterating the depths
     // Check D2TV DB for most similar D2TVs indexed
-    cmpRes, err := nh.Kademlia.Node().FindSimilar(request.QueryEmbed, request.Threshold, 1)
-    if(err != nil){
-        log.Printf("[StoreHandler] Error in FindSimilar: %v", err)
+    // also store the node embedding in the respective depth's DB. update the depth json config file too.
+    var cmpRes []storage.EmbeddingResult
+    var err error
+    switch request.Depth {
+    case 1:
+        if serr := nh.Kademlia.Node().D2DB.StoreNodeEmbedding([]byte(request.SourceNodeID), request.SourcePeerID, request.FileEmbed); serr != nil {
+            log.Printf("[StoreHandler] Could not store the D1 file embed: %v", serr)
+        }
+        cmpRes, err = nh.Kademlia.Node().D2DB.FindSimilar(request.QueryEmbed, request.Threshold, request.ResultsCount)
+        if err != nil {
+            log.Printf("[StoreHandler] Error in FindSimilar D1: %v", err)
+            return nil
+        }
+        err := nh.Kademlia.Node().D2DB.UpdateConfig(1, "D1Config.json")
+        if err!=nil{
+            log.Printf("[StoreHandler] Config file could not be updated while storing at D2: %v", err)
+        }
+    case 2:
+        if serr := nh.Kademlia.Node().D3DB.StoreNodeEmbedding([]byte(request.SourceNodeID), request.SourcePeerID, request.FileEmbed); serr != nil {
+            log.Printf("[StoreHandler] Could not store the D2 file embed: %v", serr)
+        }
+        cmpRes, err = nh.Kademlia.Node().D3DB.FindSimilar(request.QueryEmbed, request.Threshold, request.ResultsCount)
+        if err != nil {
+            log.Printf("[StoreHandler] Error in FindSimilar D2: %v", err)
+            return nil
+        }
+        err := nh.Kademlia.Node().D3DB.UpdateConfig(2, "D2Config.json")
+        if err!=nil{
+            log.Printf("[StoreHandler] Config file could not be updated while storing at D2: %v", err)
+        }
+    case 3:
+        if serr := nh.Kademlia.Node().D4DB.StoreNodeEmbedding([]byte(request.SourceNodeID), request.SourcePeerID, request.FileEmbed); serr != nil {
+            log.Printf("[StoreHandler] Could not store the D3 file embed: %v", serr)
+        }
+        cmpRes, err = nh.Kademlia.Node().D4DB.FindSimilar(request.QueryEmbed, request.Threshold, request.ResultsCount)
+        if err != nil {
+            log.Printf("[StoreHandler] Error in FindSimilar D3: %v", err)
+            return nil
+        }
+        err := nh.Kademlia.Node().D4DB.UpdateConfig(3, "D3Config.json")
+        if err!=nil{
+            log.Printf("[StoreHandler] Config file could not be updated while storing at D3: %v", err)
+        }
+    default:
+        log.Printf("[StoreHandler] unexpected depth: %d", request.Depth)
         return nil
     }
+    // cmpRes, err := nh.Kademlia.Node().FindSimilar(request.QueryEmbed, request.Threshold, 1)
+    // if(err != nil){
+    //     log.Printf("[StoreHandler] Error in FindSimilar: %v", err)
+    //     return nil
+    // }
 
     // Pruned case, no closer nodes found
     if(len(cmpRes) == 0){

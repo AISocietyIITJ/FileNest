@@ -319,14 +319,15 @@ func handleStoreUser(p *models.UserPeer, ctx context.Context, kademliaHandler *i
 }
 
 func handleFindNode(p *models.UserPeer, ctx context.Context, kademliaHandler *integration.ComprehensiveKademliaHandler, SourceNodeID string, TargetNodeID string){
-	/* 1) send findNode req. to bootstraps
+	/* 
+	1) send findNode req. to bootstraps
 	2) take closest node resp. from bootstraps, send req. to closer node
 	3) repeat 2 till Found==true
 	*/
 	decTargetNodeID, _ := hex.DecodeString(TargetNodeID)
-	closestBootstraps := kademliaHandler.Node().RoutingTable().FindClosest(decTargetNodeID, 1)
-	if(len(closestBootstraps) == 0){
-		log.Println("Could not find any bootstrap node ID to begin the store process.")
+	closestNodes := kademliaHandler.Node().RoutingTable().FindClosest(decTargetNodeID, 1)
+	if(len(closestNodes) == 0){
+		log.Println("Could not find any node ID to begin the store process.")
         return
 	}
     
@@ -338,7 +339,7 @@ func handleFindNode(p *models.UserPeer, ctx context.Context, kademliaHandler *in
 
         // Find a peer we haven't contacted yet
         var nextPeer *types.PeerInfo
-        for _, peer := range closestBootstraps {
+        for _, peer := range closestNodes {
             if !contacted[peer.PeerID] {
                 nextPeer = &peer
                 break

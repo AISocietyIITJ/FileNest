@@ -10,4 +10,6 @@ type EmbeddingResult struct {
 type Interface interface {
 	StoreNodeEmbedding(nodeID []byte, peerID string, embeddingVec []float64) error
 	FindSimilar(queryEmbed []float64, threshold float64, limit int) ([]EmbeddingResult, error)
+	UpdateTV(depth int) ([]float64, error)
+	UpdateConfig(depth int, filepath string) error
 }
