@@ -15,6 +15,9 @@ type KademliaNode struct {
 	PeerID       string            // Ephemeral libp2p PeerID
 	routingTable *RoutingTable     // stores nodeIDs which have contacted the Node before
 	storage      storage.Interface // stores nodeIDs which match the TV of this node
+	D2DB		 storage.Interface
+	D3DB		 storage.Interface
+	D4DB		 storage.Interface
 	network      NetworkInterface
 }
 
@@ -30,12 +33,27 @@ func NewKademliaNode(nodeID []byte, peerID string, network NetworkInterface, dbP
 	if err != nil {
 		return nil, err
 	}
+	D2DB, err := storage.NewSQLiteStorage("./d2tv.db")
+	if err != nil {
+		return nil, err
+	}
+	D3DB, err := storage.NewSQLiteStorage("./d3tv.db")
+	if err != nil {
+		return nil, err
+	}
+	D4DB, err := storage.NewSQLiteStorage("./d4tv.db")
+	if err != nil {
+		return nil, err
+	}
 
 	return &KademliaNode{
 		NodeID:       nodeID,
 		PeerID:       peerID,
 		routingTable: NewRoutingTable(nodeID, peerID, 20), // K=20
-		storage:      sqliteStorage,                       // Initialize storage
+		storage:      sqliteStorage,                       // Initialize D1 Storage
+		D2DB: D2DB,
+		D3DB: D3DB,
+		D4DB: D4DB,
 		network:      network,
 	}, nil
 }

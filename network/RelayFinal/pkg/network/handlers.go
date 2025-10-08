@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"final/backend/pkg/identity"
 	"final/backend/pkg/integration"
+	"fmt"
 
 	// "final/network/RelayFinal/pkg/network/helpers"
 	// "final/network/RelayFinal/pkg/relay/models"
@@ -40,15 +41,33 @@ func (nh *NetworkHandler) FindNodeHandler(params map[string]any) []byte {
     }
 
     // Find k closest peers in own RT
-    closestPeers := nh.Kademlia.Node().RoutingTable().FindClosest(req.TargetID, 20)
+    closestPeers := nh.Kademlia.Node().RoutingTable().FindClosest(req.TargetNodeID, 20)
     if len(closestPeers) == 0 {
         log.Println("[FindNodeHandler] Could not find any peers in the routing table.")
-    }
 
+        response := models.FindNodeResponse{
+            SenderNodeID: nh.Kademlia.Node().NodeID,
+            SenderPeerID: nh.Kademlia.Node().PeerID,
+            ClosestNodes: nil,
+            Success: false,
+        }
+
+        respJSON, err := json.Marshal(response)
+        if err != nil {
+            log.Printf("[FindNodeHandler] Error marshalling response: %v", err)
+            return nil
+        }
+        return respJSON 
+    }
     log.Printf("[FindNodeHandler] Found %d closer peers.", len(closestPeers))
 
-    // Marshal the list of peers and send it back as the response.
-    respJSON, err := json.Marshal(closestPeers)
+    
+    response := models.FindNodeResponse{
+        SenderNodeID: nh.Kademlia.Node().NodeID,
+        SenderPeerID: nh.Kademlia.Node().PeerID,
+        ClosestNodes: closestPeers,
+    }
+    respJSON, err := json.Marshal(response)
     if err != nil {
         log.Printf("[FindNodeHandler] Error marshalling response: %v", err)
         return nil
@@ -140,41 +159,44 @@ func (nh *NetworkHandler) PingHandler(params map[string]any) []byte {
 	return reqJson
 }
 
-// type EmbeddingSearchRequest struct {
-// 	Route        string    `json:"route"`
-// 	SourceNodeID string    `json:"source_node_id"`
-// 	SourcePeerID string    `json:"source_peer_id"`
-// 	NextNodeID string	   `json:"next_node_id"`
-// 	NextPeerID string      `json:"next_peer_id"`
-// 	ReceiverPeerID string `json:"receiver_peer_id"`
-// 	QueryEmbed   []float64 `json:"embed"`
-// 	Depth        int       `json:"prev_depth"`
-// 	Type         string    `json:"type"`
-// 	Threshold    float64   `json:"threshold"`
-// 	ResultsCount int       `json:"results_count"`
-// 	TargetNodeID string    `json:"target_node_id"`
-// 	Found bool `json:"found"`
-// }
-
 
 func (nh *NetworkHandler) StoreHandler(params []byte, body map[string]any) []byte {
     log.Printf("[StoreHandler] Received store request with params: %+v", params)
-    response := models.EmbeddingSearchResponse{}
+    response := models.EmbeddingStoreResponse{}
     selfNodeID := nh.Kademlia.Node().NodeID
     
-    request := models.EmbeddingSearchRequest{}
+    request := models.EmbeddingStoreRequest{}
     json.Unmarshal(params, &request)
-    
-    nextNodeID := request.NextNodeID
-    nextPeerID := request.NextPeerID
-    thres := request.Threshold
+
+    // Store on own DB, base case
+    if(request.Depth == 4){
+        response.Found = true
+        // Return most similar files in D4 DB here. TBA
+        response.Pruned = false
+        response.Message = "Stored file on last depth"
+        response.QueryEmbed = request.QueryEmbed
+        response.FileEmbed = request.FileEmbed
+        response.NextNodeID = ""
+        response.SourceNodeID = hex.EncodeToString(selfNodeID)
+        response.SourcePeerID = nh.Kademlia.Node().RoutingTable().SelfPeerID
+
+        respJSON, err := json.Marshal(response)
+        if err != nil {
+            log.Printf("[StoreHandler] Error marshalling response after found: %v", err)
+            return nil
+        }
+        return respJSON
+    }
+
+    // Not depth 4, keep iterating the depths
     // Check D2TV DB for most similar D2TVs indexed
-    cmpRes, err := nh.Kademlia.Node().FindSimilar(request.QueryEmbed, thres, 1)
+    cmpRes, err := nh.Kademlia.Node().FindSimilar(request.QueryEmbed, request.Threshold, 1)
     if(err != nil){
         log.Printf("[StoreHandler] Error in FindSimilar: %v", err)
         return nil
     }
 
+    // Pruned case, no closer nodes found
     if(len(cmpRes) == 0){
         response.Message = "Pruning this lookup, no suitable cluster found."
         response.Pruned = true
@@ -188,8 +210,17 @@ func (nh *NetworkHandler) StoreHandler(params []byte, body map[string]any) []byt
         return respJSON
     }
 
-    
-    
+    //Not pruned,  Found a suitable cluster
+    bestRes := cmpRes[0] // Closest matching embed ki node
+    response.Depth = request.Depth+1
+    response.Message = fmt.Sprintf("Found next Node on depth %d", response.Depth)
+    response.QueryEmbed = request.QueryEmbed
+    response.SourceNodeID = hex.EncodeToString(selfNodeID)
+    response.SourcePeerID = nh.Kademlia.Node().RoutingTable().SelfPeerID
+    response.NextNodeID = hex.EncodeToString(bestRes.NodeID)
+    response.Found = false
+    response.Pruned= false
+
     respJSON, err := json.Marshal(response)
     if err != nil {
         log.Printf("[StoreHandler] Error marshalling response: %v", err)

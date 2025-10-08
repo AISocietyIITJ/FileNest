@@ -167,8 +167,6 @@ func addToD1TV(peers []relayhelper.PeerDoc, selfNodeID []byte, kademliaHandler *
 			kademliaHandler.StoreEmbedding(bootstrapID, peerID, embedding) // Stores to D1TV.db
 		}
 	}
-
-	return 
 }
 
 func bootstrapKademlia(kademliaHandler *integration.ComprehensiveKademliaHandler, peers []relayhelper.PeerDoc) {
@@ -274,7 +272,7 @@ func handleFindValueUser(p *models.UserPeer, ctx context.Context, kademliaHandle
 func handleStoreUser(p *models.UserPeer, ctx context.Context, kademliaHandler *integration.ComprehensiveKademliaHandler, SourceNodeID string) {
     log.Println("🔍 Starting store process...")
     test_embedding := []float64{0.15, 0.25, 0.35, 0.45, 0.55}
-    threshold := 0.0
+    threshold := 0.4
 	
     // 1. Determine the key for the data. Find a representative NodeID for the embedding.
     targets, err := kademliaHandler.Node().FindSimilar(test_embedding, threshold, 10)
@@ -289,7 +287,7 @@ func handleStoreUser(p *models.UserPeer, ctx context.Context, kademliaHandler *i
 
 	for _, target := range targets{
 		targetNodeID := hex.EncodeToString(target.NodeID)
-		params := models.EmbeddingSearchRequest{
+		params := models.EmbeddingStoreRequest{
 			Type:           "POST",
 			Route:          "store",
 			SourceNodeID:   SourceNodeID,
@@ -304,18 +302,63 @@ func handleStoreUser(p *models.UserPeer, ctx context.Context, kademliaHandler *i
 		if(err != nil){
 			log.Printf("Error sending JSON to peer : %+v", err.Error())
 		}
-		var respDec models.EmbeddingSearchResponse
+		var respDec models.EmbeddingStoreResponse
 		json.Unmarshal(resp, &respDec)
 		
+		// Pruned case, continue the search over other peers.
 		if(respDec.Pruned){
 			continue
 		}
 		
 		// Not pruned. We get a nodeid for next depth. We want peerid of that node now.
-		handleFindNode()
+
+		handleFindNode(p, ctx, kademliaHandler, SourceNodeID, respDec.NextNodeID)
 
 		log.Printf("Response from D1 peer: %+v", resp)
 	}
+}
+
+func handleFindNode(p *models.UserPeer, ctx context.Context, kademliaHandler *integration.ComprehensiveKademliaHandler, SourceNodeID string, TargetNodeID string){
+	/* 1) send findNode req. to bootstraps
+	2) take closest node resp. from bootstraps, send req. to closer node
+	3) repeat 2 till Found==true
+	*/
+	decTargetNodeID, _ := hex.DecodeString(TargetNodeID)
+	closestBootstraps := kademliaHandler.Node().RoutingTable().FindClosest(decTargetNodeID, 1)
+	if(len(closestBootstraps) == 0){
+		log.Println("Could not find any bootstrap node ID to begin the store process.")
+        return
+	}
+    
+	contacted := make(map[string]bool)
+    maxIterations := 10 // Prevent infinite loops
+    
+    for iteration := 0; iteration < maxIterations; iteration++ {
+        log.Printf("Find_node iteration %d", iteration+1)	
+
+        // Find a peer we haven't contacted yet
+        var nextPeer *types.PeerInfo
+        for _, peer := range closestBootstraps {
+            if !contacted[peer.PeerID] {
+                nextPeer = &peer
+                break
+            }
+        }
+        if nextPeer == nil {
+            log.Println("No more uncontacted peers to query")
+            break
+        }
+
+
+	}
+
+	resp, err := helpers.SendJSON(p, ctx, p.Host.ID().String(), params, nil)
+	if(err != nil){
+		log.Printf("Error sending JSON to peer : %+v", err.Error())
+	}
+	var respDec models.FindNodeResponse
+	json.Unmarshal(resp, &respDec)
+
 }
 
 // func handleStoreUser(p *models.UserPeer, ctx context.Context, kademliaHandler *integration.ComprehensiveKademliaHandler, SourceNodeID []byte) {
