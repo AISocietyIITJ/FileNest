@@ -43,7 +43,8 @@ func (nh *NetworkHandler) FindNodeHandler(params map[string]any) []byte {
     }
 
     // Find k closest peers in own RT
-    closestPeers := nh.Kademlia.Node().RoutingTable().FindClosest(req.TargetNodeID, 20)
+    strTargetNodeID, _ := hex.DecodeString(req.TargetNodeID)
+    closestPeers := nh.Kademlia.Node().RoutingTable().FindClosest(strTargetNodeID, 20)
     if len(closestPeers) == 0 {
         log.Println("[FindNodeHandler] Could not find any peers in the routing table.")
 

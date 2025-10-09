@@ -440,8 +440,8 @@ func handleFindNode(p *models.UserPeer, ctx context.Context, kademliaHandler *in
 			Route: "find_node",
 			SenderNodeID: hex.EncodeToString(kademliaHandler.Node().NodeID),
 			SenderPeerID: kademliaHandler.Node().PeerID,
-			ReceiverNodeID: nextPeer.NodeID,
-			TargetNodeID: decTargetNodeID,
+			ReceiverNodeID: hex.EncodeToString(nextPeer.NodeID),
+			TargetNodeID: TargetNodeID,
 			Timestamp: time.Now().Unix(),
 		}
 		resp, err := helpers.SendJSON(p, ctx, nextPeer.PeerID, params, nil)

@@ -99,8 +99,8 @@ type FindNodeRequest struct {
     Route          string `json:"route"`
     SenderNodeID   string `json:"sender_node_id"`
     SenderPeerID   string `json:"sender_peer_id"`
-    ReceiverNodeID []byte `json:"receiver_node_id"`
-    TargetNodeID       []byte `json:"target_node_id"` // The NodeID we want to reach
+    ReceiverNodeID string `json:"receiver_node_id"`
+    TargetNodeID       string `json:"target_node_id"` // The NodeID we want to reach
     Timestamp      int64  `json:"timestamp"`
 }
 
