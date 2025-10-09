@@ -327,18 +327,15 @@ func handleDepthStream(s network.Stream) {
         log.Printf("[DEBUG] Handling register request from peer")
         // Handle registration - no need to unmarshal ReqParams for this
         continue
-    case "SendMsg":
+    case "SendMsg", "forward":
         // This is a message forwarding request
         var reqParams map[string]any
         cleanReqParams := bytes.TrimRight(reqStruct.ReqParams, "\x00")
-        if len(cleanReqParams) > 0 && string(cleanReqParams) != "{}" {
-            if err := json.Unmarshal(cleanReqParams, &reqParams); err != nil {
-                log.Printf("[ERROR] Failed to unmarshal SendMsg request: %v (payload=%q)", err, cleanReqParams)
-                continue
-            }
-        } else {
-            reqParams = make(map[string]any)
-        }
+        log.Printf("reqParams: %+v", cleanReqParams)
+		if err := json.Unmarshal(cleanReqParams, &reqParams); err != nil {
+			log.Printf("[ERROR] Failed to unmarshal SendMsg request: %v (payload=%q)", err, cleanReqParams)
+			continue
+		}
         
         log.Printf("[DEBUG] ReqParams is: %+v", reqParams)
         
