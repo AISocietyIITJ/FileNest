@@ -3,8 +3,8 @@ package main
 import (
 	"crypto/rand"
 	"crypto/sha256"
+	"final/network/RelayFinal/pkg/relay/helpers"
 	"io"
-	"relay/helpers"
 
 	//"io"
 	"math/big"
@@ -55,7 +55,7 @@ const DepthProtocol = protocol.ID("/depth/1.0.0")
 type reqFormat struct {
 	Type      string          `json:"type,omitempty"`
 	//PubIP     string          `json:"pubip,omitempty"`
-	PeerID    string			`json:"peer_id"`
+	PeerID    string			`json:"peerid"`
 	ReqParams json.RawMessage `json:"reqparams,omitempty"`
 	Body      json.RawMessage `json:"body,omitempty"`
 }
@@ -270,7 +270,7 @@ func handleDepthStream(s network.Stream) {
 		if req.Type == "register" {
 			peerID := s.Conn().RemotePeer()
 			peerID2 := req.PeerID
-				
+			
 			if peerID2 != peerID.String() {
 				fmt.Printf("SELF PEER ID MISMATCH\nID1: %v \nID2: %v\n", peerID, peerID2)
 				return
