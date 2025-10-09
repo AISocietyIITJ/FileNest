@@ -21,6 +21,7 @@ type IDs struct {
 }
 
 func SendJSON(p *models.UserPeer, ctx context.Context, pid string, params interface{}, body interface{}) ([]byte, error) {
+	log.Printf("Sending JSON: %+v", params)
 	paramsJson, _ := json.Marshal(params)
 	bodyJson, _ := json.Marshal(body)
 	return peer.Send(p, ctx, pid, paramsJson, bodyJson)

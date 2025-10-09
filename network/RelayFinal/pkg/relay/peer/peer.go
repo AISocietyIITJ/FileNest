@@ -369,7 +369,7 @@ func handleDepthStream(s network.Stream) {
     }
 }
 
-func Send(dp *models.UserPeer, ctx context.Context, targetPeerID string, reqParams []byte, body []byte) ([]byte, error) {
+func Send(dp *models.UserPeer, ctx context.Context, targetPeerID string, reqParams json.RawMessage, body []byte) ([]byte, error) {
 	//completeIP := TargetIP + ":" + targetPort
 
 	//sends msg to relay
@@ -389,20 +389,21 @@ func Send(dp *models.UserPeer, ctx context.Context, targetPeerID string, reqPara
 	}
 
 	jsonReqRelay, err := json.Marshal(req)
-
 	if err != nil {
 		log.Println("[DEBUG]Error marshalling get req to be sent to relay")
 		return nil, err
-	} else {
-		log.Println("[DEBUG]Marshalled get req to be sent to relay successfully")
-	}
-	log.Println([]byte(jsonReqRelay))
-	stream.Write([]byte(jsonReqRelay))
+		} else {
+			log.Println("[DEBUG]Marshalled get req to be sent to relay successfully")
+		}
+	jsonReqRelay = append(jsonReqRelay, '\n')
+	log.Println(jsonReqRelay)
+
+	stream.Write(jsonReqRelay)
 
 	log.Println("[DEBUG]Msg req sent to relay, waiting for ack")
 	reader := bufio.NewReader(stream)
 	log.Println("[DEBUG]Reading response from relay")
-	var resp = make([]byte, 1024*8)
+	var resp = make([]byte, 1024*16)
 	reader.Read(resp)
 	resp = bytes.TrimRight(resp, "\x00")
 	defer stream.Close()

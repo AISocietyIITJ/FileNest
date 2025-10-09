@@ -52,12 +52,11 @@ const DepthProtocol = protocol.ID("/depth/1.0.0")
 
 //var RelayMultiAddrList = []string{"/dns4/0.tcp.in.ngrok.io/tcp/14395/p2p/12D3KooWLBVV1ty7MwJQos34jy1WqGrfkb3bMAfxUJzCgwTBQ2pn",}
 
-type reqFormat struct {
-	Type      string          `json:"type,omitempty"`
-	//PubIP     string          `json:"pubip,omitempty"`
-	PeerID    string			`json:"peerid"`
-	ReqParams json.RawMessage `json:"req_params,omitempty"`
-	Body      json.RawMessage `json:"body,omitempty"`
+type ReqFormat struct {
+    Type      string          `json:"type,omitempty"`
+    PeerID    string          `json:"peer_id,omitempty"`
+    ReqParams json.RawMessage `json:"req_params,omitempty"`
+    Body      json.RawMessage `json:"body,omitempty"`
 }
 
 // var (
@@ -255,7 +254,7 @@ func handleDepthStream(s network.Stream) {
 	decoder := json.NewDecoder(s)
 
 	for {
-		var req reqFormat
+		var req ReqFormat
 		err := decoder.Decode(&req)
 		if err != nil {
 			// io.EOF means the other side closed the connection cleanly.
@@ -311,12 +310,12 @@ func handleDepthStream(s network.Stream) {
 				}
 				
 				//construct and send forward request to peer
-				var forwardReq reqFormat
+				var forwardReq ReqFormat
 				forwardReq.Body = req.Body
 				forwardReq.ReqParams = req.ReqParams
 				forwardReq.PeerID = req.PeerID
 				forwardReq.Type = "forward"
-
+				log.Printf("forwardReq is: %+v", forwardReq)
 				relayMA, err := ma.NewMultiaddr(targetRelayAddr)
 				if err != nil {
 					fmt.Println("[DEBUG] Failed to parse relay multiaddr:", err)
