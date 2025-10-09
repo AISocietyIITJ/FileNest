@@ -99,7 +99,7 @@ func (nh *NetworkHandler) FindValueHandler(params map[string]any) []byte {
     if request.Depth == 4 {
         log.Println("[FindValueHandler] Reached depth 4, returning all indexed files")
 
-        files, err := nh.Kademlia.Node().IndexedFiles.GetAllFiles() // !!! complete this fn
+        files, err := nh.Kademlia.Node().IndexedFiles.GetAllFiles(request.Threshold, request.QueryEmbed) // !!! complete this fn
         if err != nil {
             errString := fmt.Sprintf("[FindValueHandler] Error retrieving files from D4 storage: %v", err)
             log.Printf(errString)
@@ -125,7 +125,7 @@ func (nh *NetworkHandler) FindValueHandler(params map[string]any) []byte {
         var allFiles [][]float64
         if len(files) > 0 {
             for _,file := range files{
-                allFiles = append(allFiles, file)
+                allFiles = append(allFiles, file.Embedding)
             }
         }
         
@@ -243,11 +243,12 @@ func (nh *NetworkHandler) StoreHandler(params []byte, body map[string]any) []byt
     if(request.Depth == 4){
         response.Found = true
         // Store most similar files in D4 DB here. TBA
-        err := nh.Kademlia.Node().IndexedFiles.StoreNodeEmbedding([]byte(request.SourceNodeID), request.SourcePeerID, request.FileEmbed) //need to pass the params here
+        // filepath needs to be passed in the request from client side
+        err := nh.Kademlia.Node().IndexedFiles.StoreFileEmbedding([]byte(request.SourceNodeID), request.SourcePeerID, request.FileEmbed, ) //need to pass the params here
         if err!=nil{
             log.Printf("[StoreHandler] Could not store the D4 file embed\n")
         }
-        serr := nh.Kademlia.Node().IndexedFiles.UpdateConfig(4, "D4Config.json")
+        serr := nh.Kademlia.Node().IndexedFiles.UpdateD4Config(4, "D4Config.json")
         if serr!=nil{
             log.Printf("[StoreHandler] Config file could not be updated while storing at D4: %v", serr)
         }

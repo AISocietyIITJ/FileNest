@@ -11,4 +11,8 @@ type Interface interface {
 	FindSimilar(queryEmbed []float64, threshold float64, limit int) ([]EmbeddingResult, error)
 	UpdateTV(depth int) ([]float64, error)
 	UpdateConfig(depth int, filepath string) error
+	StoreFileEmbedding(nodeID []byte, peerID string, embeddingVec []float64, filepath string) error
+	UpdateD4TV(depth int) ([]float64, error)
+	UpdateD4Config(depth int, dbfilepath string) error
+	GetAllFiles(threshold float64, embed []float64) ([]FileRecord, error) 
 }
