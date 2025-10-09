@@ -296,6 +296,7 @@ func handleFindValueUser(p *models.UserPeer, ctx context.Context, kademliaHandle
 func handleStoreUser(p *models.UserPeer, ctx context.Context, kademliaHandler *integration.ComprehensiveKademliaHandler) {
     log.Println("🔍 Starting store process...")
     test_embedding := []float64{0.15, 0.25, 0.35, 0.45, 0.55}
+	test_filepath := "home/ma/chudao/kys"
     threshold := 0.4
 	
     // Find Depth 1 nodes
@@ -321,7 +322,7 @@ func handleStoreUser(p *models.UserPeer, ctx context.Context, kademliaHandler *i
             continue 
         }
         log.Printf("Found initial target peer: %+v", currentPeerInfo)
-
+		
 
         currentNodeID := targetNodeID
         depth := 1
@@ -339,6 +340,7 @@ func handleStoreUser(p *models.UserPeer, ctx context.Context, kademliaHandler *i
                 SourcePeerID:   kademliaHandler.Node().PeerID,
                 TargetNodeID:   currentNodeID,
                 ReceiverPeerID: currentPeerInfo.PeerID,
+				FilePath: test_filepath,
                 QueryEmbed:     test_embedding,
                 Depth:          depth,
                 Found:          false,

@@ -30,6 +30,7 @@ type EmbeddingStoreRequest struct {
     SourcePeerID   string    `json:"source_peer_id"`
     ReceiverPeerID string    `json:"receiver_peer_id"`
     FileEmbed     []float64 `json:"file_embed"`
+    FilePath      string `json:"file_path"`
     QueryEmbed    []float64 `json:"query_embed"`
     Depth          int       `json:"depth"`
     Threshold      float64   `json:"threshold"`

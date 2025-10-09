@@ -102,7 +102,7 @@ func (nh *NetworkHandler) FindValueHandler(params map[string]any) []byte {
         files, err := nh.Kademlia.Node().IndexedFiles.GetAllFiles(request.Threshold, request.QueryEmbed) // !!! complete this fn
         if err != nil {
             errString := fmt.Sprintf("[FindValueHandler] Error retrieving files from D4 storage: %v", err)
-            log.Printf(errString)
+            log.Printf("%s", errString)
             response := models.EmbeddingSearchResponse{
                 Found:        false,
                 Message:      errString,
@@ -239,12 +239,13 @@ func (nh *NetworkHandler) StoreHandler(params []byte, body map[string]any) []byt
     request := models.EmbeddingStoreRequest{}
     json.Unmarshal(params, &request)
 
+    decSourceNodeID, _ := hex.DecodeString(request.SourceNodeID)
     // Store on own DB, base case
     if(request.Depth == 4){
         response.Found = true
         // Store most similar files in D4 DB here. TBA
         // filepath needs to be passed in the request from client side
-        err := nh.Kademlia.Node().IndexedFiles.StoreFileEmbedding([]byte(request.SourceNodeID), request.SourcePeerID, request.FileEmbed, ) //need to pass the params here
+        err := nh.Kademlia.Node().IndexedFiles.StoreFileEmbedding(decSourceNodeID, request.SourcePeerID, request.FileEmbed, request.FilePath) //need to pass the params here
         if err!=nil{
             log.Printf("[StoreHandler] Could not store the D4 file embed\n")
         }
