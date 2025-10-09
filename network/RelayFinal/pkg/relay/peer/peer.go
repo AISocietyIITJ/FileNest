@@ -322,22 +322,33 @@ func handleDepthStream(s network.Stream) {
             log.Printf("[ERROR] Failed to unmarshal ReqFormat: %v (payload=%q)", err, line)
             continue
         }
-
+    switch reqStruct.Type {
+    case "register":
+        log.Printf("[DEBUG] Handling register request from peer")
+        // Handle registration - no need to unmarshal ReqParams for this
+        continue
+    case "SendMsg":
+        // This is a message forwarding request
         var reqParams map[string]any
-        if err := json.Unmarshal(bytes.TrimRight(reqStruct.ReqParams, "\x00"), &reqParams); err != nil {
-            log.Printf("[ERROR] Failed to unmarshal incoming request: %v", err)
-            continue
+        cleanReqParams := bytes.TrimRight(reqStruct.ReqParams, "\x00")
+        if len(cleanReqParams) > 0 && string(cleanReqParams) != "{}" {
+            if err := json.Unmarshal(cleanReqParams, &reqParams); err != nil {
+                log.Printf("[ERROR] Failed to unmarshal SendMsg request: %v (payload=%q)", err, cleanReqParams)
+                continue
+            }
+        } else {
+            reqParams = make(map[string]any)
         }
-        log.Printf("[DEBUG]ReqParams is : %+v", reqParams)
-
+        
+        log.Printf("[DEBUG] ReqParams is: %+v", reqParams)
+        
         switch strings.ToUpper(fmt.Sprint(reqParams["type"])) {
         case "GET":
-
             log.Printf("Serving GET Req")
             resp := ServeGetReq(reqStruct.ReqParams)
             resp = bytes.TrimRight(resp, "\x00")
-            resp = append(resp, '\n') // v.v. imp
-
+            resp = append(resp, '\n')
+            
             log.Printf("Response for GET is: %s", string(resp))
             if _, err := s.Write(resp); err != nil {
                 log.Printf("[DEBUG] Error writing resp bytes to relay stream: %v", err)
@@ -347,7 +358,7 @@ func handleDepthStream(s network.Stream) {
             resp := ServePostReq(reqStruct.ReqParams, reqStruct.Body)
             resp = bytes.TrimRight(resp, "\x00")
             resp = append(resp, '\n')
-			
+            
             if _, err := s.Write(resp); err != nil {
                 log.Printf("[DEBUG] Error writing resp bytes to relay stream: %v", err)
                 return
@@ -355,6 +366,9 @@ func handleDepthStream(s network.Stream) {
         default:
             log.Printf("[WARN] Unknown route type: %v", reqParams["type"])
         }
+    default:
+        log.Printf("[WARN] Unknown request type: %s", reqStruct.Type)
+    }
     }
 }
 
