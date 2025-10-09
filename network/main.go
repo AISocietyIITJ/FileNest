@@ -107,7 +107,7 @@ func main() {
 
 	// Only depth peer goes to mongo
 	if(*ptype == "depth"){
-		embed := []float64{0.1,0.2,0.3,0.5,0.9}
+		embed := []float64{0.1,0.2,0.3,0.5,1}
 		if err = relayhelper.UpsertNode(decSelfNodeID, p.Host.ID().String(), embed); err != nil {
 			log.Printf("Error in upserting node to mongo: %v \n", err.Error())
 		} else {
@@ -449,7 +449,7 @@ func handleFindNode(p *models.UserPeer, ctx context.Context, kademliaHandler *in
 			log.Printf("Error sending JSON to peer : %+v", err.Error())
 			continue
 		}
-		
+
 		var respDec models.FindNodeResponse
         if err := json.Unmarshal(resp, &respDec); err != nil {
             log.Printf("Error unmarshalling find_node response: %v", err)
