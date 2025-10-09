@@ -110,6 +110,5 @@ type FindNodeResponse struct {
     SenderPeerID string `json:"sender_peer_id"`
     ClosestNodes []types.PeerInfo  `json:"closest_nodes"` // K closest nodes to TargetID
     Timestamp    int64  `json:"timestamp"`
-    Success      bool   `json:"success"`
     Found bool `json:"found"`
 }

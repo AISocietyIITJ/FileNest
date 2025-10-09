@@ -456,10 +456,6 @@ func handleFindNode(p *models.UserPeer, ctx context.Context, kademliaHandler *in
             continue
         }
 
-		if(!respDec.Success){
-			log.Println("No closer nodes found, search complete")
-            break
-		}
         if len(respDec.ClosestNodes) == 0 {
             log.Println("No closer nodes found, search complete")
             break
