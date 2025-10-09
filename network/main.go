@@ -444,7 +444,7 @@ func handleFindNode(p *models.UserPeer, ctx context.Context, kademliaHandler *in
 			TargetNodeID: decTargetNodeID,
 			Timestamp: time.Now().Unix(),
 		}
-		resp, err := helpers.SendJSON(p, ctx, p.Host.ID().String(), params, nil)
+		resp, err := helpers.SendJSON(p, ctx, nextPeer.PeerID, params, nil)
 		if(err != nil){
 			log.Printf("Error sending JSON to peer : %+v", err.Error())
 			continue

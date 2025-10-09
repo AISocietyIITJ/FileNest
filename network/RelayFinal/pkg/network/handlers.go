@@ -69,7 +69,6 @@ func (nh *NetworkHandler) FindNodeHandler(params map[string]any) []byte {
         SenderNodeID: nh.Kademlia.Node().NodeID,
         SenderPeerID: nh.Kademlia.Node().PeerID,
         ClosestNodes: closestPeers,
-        Timestamp: time.Now().Unix(),
         Found: true,
     }
     respJSON, err := json.Marshal(response)
