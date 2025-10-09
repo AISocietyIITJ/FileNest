@@ -139,7 +139,6 @@ func NewPeer(relayMultiAddrList []string, peerType string) (*models.UserPeer, er
 	})
 
 	relayIDused := distmap[0].relayID
-	log.Println(relayIDused)
 	var RelayAddr string
 
 	for _, multiaddr := range relayMultiAddrList {
@@ -235,33 +234,40 @@ func Start(dp *models.UserPeer, ctx context.Context) error {
 
 	// Start a goroutine to periodically refresh reservations
 	go refreshReservations(dp, ctx, *relayInfo)
+    //now, sends a register req. to relay
+    var reqSent models.ReqFormat
+    reqSent.Type = "register"
+    reqSent.PeerID = dp.Host.ID().String()
+    reqSent.ReqParams = json.RawMessage("{}")
+    reqSent.Body = json.RawMessage("{}")
+    
+    log.Printf("reqSent before marshal: %+v", reqSent)
+    log.Printf("reqSent PID in peer.go: %s", reqSent.PeerID)
 
-	//now, sends a register req. to relay
-	var reqSent models.ReqFormat
-	reqSent.Type = "register"
-	reqSent.PeerID = dp.Host.ID().String() // now sending the the peerID in the req to register in the relay
-	//reqSent.PubIP = OwnPubIP // have to use a stun server to get public ip first and then send register command
-	log.Printf("reqSent PID: %v\n", reqSent.PeerID)
+    stream, err := dp.Host.NewStream(context.Background(), relayInfo.ID, UserPeerProtocol)
+    if err != nil {
+        log.Printf("[DEBUG]Error Opening stream to relay: %v", err)
+        return err
+    }
 
-	stream, err := dp.Host.NewStream(context.Background(), relayInfo.ID, UserPeerProtocol)
-	if err != nil {
-		log.Println("[DEBUG]Error Opening stream to relay")
-	}
+    log.Println("[DEBUG]Opened stream to relay successsfully")
+    reqJson, err := json.Marshal(reqSent)
+    if err != nil {
+        log.Printf("[DEBUG]Error marshalling the req to be sent: %v", err)
+        return err
+    }
+    
+    log.Printf("[DEBUG]Marshaled JSON: %s", string(reqJson))
 
-	log.Println("[DEBUG]Opened stream to relay successsfully")
-	reqJson, err := json.Marshal(reqSent)
-	if err != nil {
-		log.Println("[DEBUG]Error marshalling the req to be sent")
-	}
+    _, err = stream.Write(reqJson)
+    if err != nil {
+        log.Printf("error during writing to stream: %v", err.Error())
+        return err
+    }
+    time.Sleep(1 * time.Second)
 
-	_, err = stream.Write([]byte(reqJson))
-	if err != nil {
-		log.Printf("error during writing to stream: %v", err.Error())
-	}
-	time.Sleep(1 * time.Second)
-
-	stream.Close()
-	return nil
+    stream.Close()
+    return nil
 }
 
 // func to refresh relay reservations

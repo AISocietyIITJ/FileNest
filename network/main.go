@@ -107,7 +107,7 @@ func main() {
 
 	// Only depth peer goes to mongo
 	if(*ptype == "depth"){
-		embed := []float64{0.0, 0.1, 0.0, 0.6, 0.9}
+		embed := []float64{0.1,0.2,0.3,0.5,0.9}
 		if err = relayhelper.UpsertNode(decSelfNodeID, p.Host.ID().String(), embed); err != nil {
 			log.Printf("Error in upserting node to mongo: %v \n", err.Error())
 		} else {
@@ -322,7 +322,7 @@ func handleStoreUser(p *models.UserPeer, ctx context.Context, kademliaHandler *i
             continue 
         }
         log.Printf("Found initial target peer: %+v", currentPeerInfo)
-		
+
 
         currentNodeID := targetNodeID
         depth := 1
