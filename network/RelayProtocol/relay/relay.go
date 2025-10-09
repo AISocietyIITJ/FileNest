@@ -53,9 +53,9 @@ const DepthProtocol = protocol.ID("/depth/1.0.0")
 //var RelayMultiAddrList = []string{"/dns4/0.tcp.in.ngrok.io/tcp/14395/p2p/12D3KooWLBVV1ty7MwJQos34jy1WqGrfkb3bMAfxUJzCgwTBQ2pn",}
 
 type reqFormat struct {
-	Type      string          `json:"type,omitempty"`
+	Type string `json:"type,omitempty"`
 	//PubIP     string          `json:"pubip,omitempty"`
-	PeerID    string			`json:"peerid"`
+	PeerID    string          `json:"peerid"`
 	ReqParams json.RawMessage `json:"reqparams,omitempty"`
 	Body      json.RawMessage `json:"body,omitempty"`
 }
@@ -66,8 +66,8 @@ type reqFormat struct {
 // )
 
 var (
-	ConnectedPeers []string 
-	mu sync.RWMutex
+	ConnectedPeers []string
+	mu             sync.RWMutex
 )
 
 var RelayHost host.Host
@@ -85,7 +85,7 @@ type RelayEvents struct{}
 
 var OwnRelayAddrFull string
 
-//Listen and ListenClose are implemented empty to adhere to network.Notifiee interface
+// Listen and ListenClose are implemented empty to adhere to network.Notifiee interface
 func (re *RelayEvents) Listen(net network.Network, addr ma.Multiaddr)      {}
 func (re *RelayEvents) ListenClose(net network.Network, addr ma.Multiaddr) {}
 func (re *RelayEvents) Connected(net network.Network, conn network.Conn) {
@@ -95,7 +95,7 @@ func (re *RelayEvents) Disconnected(net network.Network, conn network.Conn) {
 	fmt.Printf("[INFO] Peer disconnected: %s\n", conn.RemotePeer())
 	// Remove peer from IDmap if needed
 	mu.Lock()
-	if contains(ConnectedPeers,conn.RemotePeer().String()){
+	if contains(ConnectedPeers, conn.RemotePeer().String()) {
 		remove(&ConnectedPeers, conn.RemotePeer().String())
 	}
 	mu.Unlock()
@@ -162,7 +162,7 @@ func main() {
 	)
 
 	err = helpers.UpsertRelayAddr(MongoClient, OwnRelayAddrFull)
-	if(err != nil){
+	if err != nil {
 		log.Printf("Error during upsertion: %v", err.Error())
 	}
 
@@ -213,16 +213,14 @@ func main() {
 	fmt.Println("[INFO] Shutting down relay...")
 }
 
-
 func remove(Lists *[]string, val string) {
-    for i, item := range *Lists {
-        if item == val {
-            *Lists = append((*Lists)[:i], (*Lists)[i+1:]...)
-            return
-        }
-    }
+	for i, item := range *Lists {
+		if item == val {
+			*Lists = append((*Lists)[:i], (*Lists)[i+1:]...)
+			return
+		}
+	}
 }
-
 
 func PingTargets(addresses []string, interval time.Duration) {
 	go func() {
@@ -253,7 +251,7 @@ func handleDepthStream(s network.Stream) {
 	fmt.Println("[DEBUG] Incoming Depth stream from", s.Conn().RemoteMultiaddr())
 	defer s.Close()
 	//reader := bufio.NewReader(s)
-		decoder := json.NewDecoder(s)
+	decoder := json.NewDecoder(s)
 
 	for {
 		var req reqFormat
@@ -271,7 +269,7 @@ func handleDepthStream(s network.Stream) {
 		if req.Type == "register" {
 			peerID := s.Conn().RemotePeer()
 			peerID2 := req.PeerID
-			
+
 			if peerID2 != peerID.String() {
 				fmt.Printf("SELF PEER ID MISMATCH\nID1: %v \nID2: %v\n", peerID, peerID2)
 				return
@@ -310,14 +308,14 @@ func handleDepthStream(s network.Stream) {
 					s.Write([]byte("[DEBUG]Target Peer not in network"))
 					return
 				}
-				
+
 				//construct and send forward request to peer
 				var forwardReq reqFormat
 				forwardReq.Body = req.Body
 				forwardReq.ReqParams = req.ReqParams
 				forwardReq.PeerID = req.PeerID
 				forwardReq.Type = "forward"
-
+				log.Printf("[Debug]Forward Req to relay : %s : %+v \n", targetRelayAddr, forwardReq)
 				relayMA, err := ma.NewMultiaddr(targetRelayAddr)
 				if err != nil {
 					fmt.Println("[DEBUG] Failed to parse relay multiaddr:", err)
@@ -512,13 +510,13 @@ func GetRelayAddr(peerID string) string {
 	RelayMultiAddrList, err := helpers.GetRelayAddrFromMongo()
 
 	if err != nil {
-		fmt.Println("[DEBUG]Error getting from mongo error : ",err)
+		fmt.Println("[DEBUG]Error getting from mongo error : ", err)
 		return ""
 	}
 	var relayList []string
 	for _, multiaddr := range RelayMultiAddrList {
-		if multiaddr == OwnRelayAddrFull{
-			continue;
+		if multiaddr == OwnRelayAddrFull {
+			continue
 		}
 		parts := strings.Split(multiaddr, "/")
 		relayList = append(relayList, parts[len(parts)-1])
@@ -591,4 +589,3 @@ func AddRelayAddrToCSV(myAddr string, path string) error {
 	_, err = f.WriteString(myAddr + "\n")
 	return err
 }
-
