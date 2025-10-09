@@ -48,7 +48,7 @@ func (nh *NetworkHandler) FindNodeHandler(params map[string]any) []byte {
         log.Println("[FindNodeHandler] Could not find any peers in the routing table.")
 
         response := models.FindNodeResponse{
-            SenderNodeID: nh.Kademlia.Node().NodeID,
+            SenderNodeID: hex.EncodeToString(nh.Kademlia.Node().NodeID),
             SenderPeerID: nh.Kademlia.Node().PeerID,
             ClosestNodes: nil,
             Timestamp: time.Now().Unix(),
@@ -66,7 +66,7 @@ func (nh *NetworkHandler) FindNodeHandler(params map[string]any) []byte {
 
     
     response := models.FindNodeResponse{
-        SenderNodeID: nh.Kademlia.Node().NodeID,
+        SenderNodeID: hex.EncodeToString(nh.Kademlia.Node().NodeID),
         SenderPeerID: nh.Kademlia.Node().PeerID,
         ClosestNodes: closestPeers,
         Found: true,

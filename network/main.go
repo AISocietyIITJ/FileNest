@@ -438,7 +438,7 @@ func handleFindNode(p *models.UserPeer, ctx context.Context, kademliaHandler *in
 		params := models.FindNodeRequest{
 			Type: "GET",
 			Route: "find_node",
-			SenderNodeID: kademliaHandler.Node().NodeID,
+			SenderNodeID: hex.EncodeToString(kademliaHandler.Node().NodeID),
 			SenderPeerID: kademliaHandler.Node().PeerID,
 			ReceiverNodeID: nextPeer.NodeID,
 			TargetNodeID: decTargetNodeID,

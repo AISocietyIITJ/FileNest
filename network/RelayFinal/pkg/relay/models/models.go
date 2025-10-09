@@ -97,7 +97,7 @@ type PingResponse struct {
 type FindNodeRequest struct {
     Type           string `json:"type"`
     Route          string `json:"route"`
-    SenderNodeID   []byte `json:"sender_node_id"`
+    SenderNodeID   string `json:"sender_node_id"`
     SenderPeerID   string `json:"sender_peer_id"`
     ReceiverNodeID []byte `json:"receiver_node_id"`
     TargetNodeID       []byte `json:"target_node_id"` // The NodeID we want to reach
@@ -106,7 +106,7 @@ type FindNodeRequest struct {
 
 // sent back to user for relaying
 type FindNodeResponse struct {
-    SenderNodeID []byte `json:"sender_node_id"`
+    SenderNodeID string `json:"sender_node_id"`
     SenderPeerID string `json:"sender_peer_id"`
     ClosestNodes []types.PeerInfo  `json:"closest_nodes"` // K closest nodes to TargetID
     Timestamp    int64  `json:"timestamp"`

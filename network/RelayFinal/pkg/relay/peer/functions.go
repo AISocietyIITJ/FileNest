@@ -33,7 +33,7 @@ func ServeGetReq(paramsBytes []byte) []byte {
 	}
 	fmt.Println("[DEBUG][ServeGetReq] Parsed params:", params)
 
-
+	
 	switch strings.ToLower(fmt.Sprint(params["route"])) {
 	case "find_node":
 		fmt.Println("[DEBUG][ServeGetReq] Handling route: find_value")
