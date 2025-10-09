@@ -18,7 +18,7 @@ type KademliaNode struct {
 	D2DB		 storage.Interface
 	D3DB		 storage.Interface
 	D4DB		 storage.Interface
-	finalfiles   storage.Interface
+	IndexedFiles   storage.Interface
 	network      NetworkInterface
 }
 
@@ -46,7 +46,7 @@ func NewKademliaNode(nodeID []byte, peerID string, network NetworkInterface, dbP
 	if err != nil {
 		return nil, err
 	}
-	finalfiles, err := storage.NewSQLiteStorage("./finalfiles.db")
+	IndexedFiles, err := storage.NewSQLiteStorage("./IndexedFiles.db")
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +59,7 @@ func NewKademliaNode(nodeID []byte, peerID string, network NetworkInterface, dbP
 		D2DB: D2DB,
 		D3DB: D3DB,
 		D4DB: D4DB,
-		finalfiles: finalfiles,
+		IndexedFiles: IndexedFiles,
 		network:      network,
 	}, nil
 }

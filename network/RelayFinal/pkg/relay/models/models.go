@@ -25,15 +25,13 @@ type ReqFormat struct {
 
 type EmbeddingStoreRequest struct {
     Route          string    `json:"route"`
+    Type           string    `json:"type"`
     SourceNodeID   string    `json:"source_node_id"`
     SourcePeerID   string    `json:"source_peer_id"`
-    NextNodeID     string    `json:"next_node_id"`
-    NextPeerID     string    `json:"next_peer_id"`
     ReceiverPeerID string    `json:"receiver_peer_id"`
     FileEmbed     []float64 `json:"file_embed"`
     QueryEmbed    []float64 `json:"query_embed"`
     Depth          int       `json:"depth"`
-    Type           string    `json:"type"`
     Threshold      float64   `json:"threshold"`
     ResultsCount   int       `json:"results_count"`
     TargetNodeID   string    `json:"target_node_id"`
@@ -54,14 +52,12 @@ type EmbeddingStoreResponse struct {
 
 type EmbeddingSearchRequest struct {
     Route          string    `json:"route"`
+    Type           string    `json:"type"`
     SourceNodeID   string    `json:"source_node_id"`
     SourcePeerID   string    `json:"source_peer_id"`
-    NextNodeID     string    `json:"next_node_id"`
-    NextPeerID     string    `json:"next_peer_id"`
     ReceiverPeerID string    `json:"receiver_peer_id"`
     QueryEmbed     []float64 `json:"query_embed"`
     Depth          int       `json:"depth"`
-    Type           string    `json:"type"`
     Threshold      float64   `json:"threshold"`
     ResultsCount   int       `json:"results_count"`
     TargetNodeID   string    `json:"target_node_id"`
@@ -70,14 +66,13 @@ type EmbeddingSearchRequest struct {
 
 type EmbeddingSearchResponse struct {
     Message      string    `json:"message"`
-    QueryEmbed   []float64 `json:"query_embed"`
     Depth        int       `json:"depth"`
     SourceNodeID string    `json:"source_node_id"`
     SourcePeerID string    `json:"source_peer_id"`
     NextNodeID   string    `json:"next_node_id"`
     Found        bool      `json:"found"`
     Pruned       bool      `json:"pruned"`
-    FileEmbed    []float64 `json:"file_embed"`
+    FileEmbeds    [][]float64 `json:"file_embed"`
 }
 
 type PingRequest struct {
@@ -115,4 +110,5 @@ type FindNodeResponse struct {
     ClosestNodes []types.PeerInfo  `json:"closest_nodes"` // K closest nodes to TargetID
     Timestamp    int64  `json:"timestamp"`
     Success      bool   `json:"success"`
+    Found bool `json:"found"`
 }

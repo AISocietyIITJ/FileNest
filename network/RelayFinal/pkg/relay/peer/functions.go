@@ -3,6 +3,7 @@ package peer
 import (
 	"final/network/RelayFinal/pkg/network"
 	"final/network/RelayFinal/pkg/relay/models"
+	"strings"
 
 	"encoding/json"
 	"fmt"
@@ -33,10 +34,10 @@ func ServeGetReq(paramsBytes []byte) []byte {
 	fmt.Println("[DEBUG][ServeGetReq] Parsed params:", params)
 
 
-	switch params["route"] {
-	case "find_value":
+	switch strings.ToLower(fmt.Sprint(params["route"])) {
+	case "find_node":
 		fmt.Println("[DEBUG][ServeGetReq] Handling route: find_value")
-		return NetHandler.FindValueHandler(params)
+		return NetHandler.FindNodeHandler(params)
 
 	case "ping":
 		fmt.Println("[DEBUG][ServeGetReq] Handling route: ping")

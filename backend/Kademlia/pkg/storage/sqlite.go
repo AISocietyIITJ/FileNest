@@ -58,7 +58,7 @@ func (s *SQLiteStorage) FindSimilar(queryEmbed []float64, threshold float64, lim
 		if similarity >= threshold {
 			results = append(results, EmbeddingResult{
 				NodeID:     ne.NodeID,
-				PeerID:     ne.PeerID,
+				// PeerID:     ne.PeerID,
 				Embedding:  []float64(ne.Embedding),
 				Similarity: similarity,
 			})

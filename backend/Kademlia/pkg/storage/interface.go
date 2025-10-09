@@ -2,7 +2,6 @@ package storage
 
 type EmbeddingResult struct {
 	NodeID     []byte    `json:"node_id"`
-	PeerID     string    `json:"peer_id"`
 	Embedding  []float64 `json:"embedding"`
 	Similarity float64   `json:"similarity"`
 }
