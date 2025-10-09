@@ -3,8 +3,8 @@ package main
 import (
 	"crypto/rand"
 	"crypto/sha256"
-	"io"
 	"final/network/RelayFinal/pkg/relay/helpers"
+	"io"
 
 	//"io"
 	"math/big"
@@ -56,7 +56,7 @@ type reqFormat struct {
 	Type      string          `json:"type,omitempty"`
 	//PubIP     string          `json:"pubip,omitempty"`
 	PeerID    string			`json:"peerid"`
-	ReqParams json.RawMessage `json:"reqparams,omitempty"`
+	ReqParams json.RawMessage `json:"req_params,omitempty"`
 	Body      json.RawMessage `json:"body,omitempty"`
 }
 
@@ -252,7 +252,7 @@ func handleDepthStream(s network.Stream) {
 	fmt.Println("[DEBUG] Incoming Depth stream from", s.Conn().RemoteMultiaddr())
 	defer s.Close()
 	//reader := bufio.NewReader(s)
-		decoder := json.NewDecoder(s)
+	decoder := json.NewDecoder(s)
 
 	for {
 		var req reqFormat
