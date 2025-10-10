@@ -85,7 +85,6 @@ func (nh *NetworkHandler) FindNodeHandler(params map[string]any) []byte {
     }
     log.Printf("[FindNodeHandler] Found %d closer peers.", len(closestPeers))
 
-    
     response := models.FindNodeResponse{
         SenderNodeID: hex.EncodeToString(nh.Kademlia.Node().NodeID),
         SenderPeerID: nh.Kademlia.Node().PeerID,
@@ -254,21 +253,19 @@ func (nh *NetworkHandler) PingHandler(params map[string]any) []byte {
 
 func (nh *NetworkHandler) StoreHandler(params []byte, body map[string]any) []byte {
     log.Printf("[StoreHandler] Received store request with params: %+v", params)
-    response := models.EmbeddingStoreResponse{}
     selfNodeID := nh.Kademlia.Node().NodeID
     
     // Parse the incoming request parameters into a structured format
     request := models.EmbeddingStoreRequest{}
     json.Unmarshal(params, &request)
-
+    
     // Decode the source node ID from hex string to bytes for storage operations
     decSourceNodeID, _ := hex.DecodeString(request.SourceNodeID)
     
     // BASE CASE: Depth 4 - Store the file embedding at the final depth
     if(request.Depth == 4){
         log.Println("[StoreHandler] Reached depth 4, storing file embedding in IndexedFiles")
-        response.Found = true
-
+        
         // Store the actual file embedding in the D4 database (IndexedFiles)
         // This is the final storage location for file embeddings
         err := nh.Kademlia.Node().IndexedFiles.StoreFileEmbedding(decSourceNodeID, request.SourcePeerID, request.FileEmbed, request.FilePath)
@@ -283,15 +280,18 @@ func (nh *NetworkHandler) StoreHandler(params []byte, body map[string]any) []byt
         }
         
         // Prepare success response for depth 4 storage
-        response.Pruned = false
-        response.Message = "Stored file on last depth"
-        response.QueryEmbed = request.QueryEmbed
-        response.FileEmbed = request.FileEmbed
-        response.NextNodeID = ""
-        response.SourceNodeID = hex.EncodeToString(selfNodeID)
-        response.SourcePeerID = nh.Kademlia.Node().RoutingTable().SelfPeerID
-        response.Depth = request.Depth+1 // Increment to depth 5 to indicate completion
-
+        response := models.EmbeddingStoreResponse{
+            Found:        true,
+            Pruned:       false,
+            Message:      "Stored file on last depth",
+            QueryEmbed:   request.QueryEmbed,
+            FileEmbed:    request.FileEmbed,
+            NextNodeID:   "",
+            SourceNodeID: hex.EncodeToString(selfNodeID),
+            SourcePeerID: nh.Kademlia.Node().RoutingTable().SelfPeerID,
+            Depth:        request.Depth + 1, // Increment to depth 5 to indicate completion
+        }
+            
         respJSON, err := json.Marshal(response)
         if err != nil {
             log.Printf("[StoreHandler] Error marshalling response after found: %v", err)
@@ -394,15 +394,18 @@ func (nh *NetworkHandler) StoreHandler(params []byte, body map[string]any) []byt
         }
 
         // Prepare response indicating a new cluster was created and routing to the chosen node
-        response.Message = "Stored embed in closest hashed node."
-        response.Pruned = false
-        response.Found = false
-        response.NextNodeID = hex.EncodeToString(closestNode.NodeID)
-        response.Depth = request.Depth + 1
-        response.FileEmbed = request.FileEmbed
-        response.SourceNodeID = hex.EncodeToString(nh.Kademlia.Node().NodeID)
-        response.SourcePeerID = nh.Kademlia.Node().PeerID
-
+        response := models.EmbeddingStoreResponse{
+            Message:      "Stored embed in closest hashed node.",
+            Pruned:       false,
+            Found:        false,
+            NextNodeID:   hex.EncodeToString(closestNode.NodeID),
+            Depth:        request.Depth + 1,
+            FileEmbed:    request.FileEmbed,
+            SourceNodeID: hex.EncodeToString(nh.Kademlia.Node().NodeID),
+            SourcePeerID: nh.Kademlia.Node().PeerID,
+            QueryEmbed: request.QueryEmbed,
+        }
+            
         respJSON, err := json.Marshal(response)
         if err != nil {
             log.Printf("[StoreHandler] Error marshalling response after cluster creation: %v", err)
@@ -419,15 +422,18 @@ func (nh *NetworkHandler) StoreHandler(params []byte, body map[string]any) []byt
     log.Printf("[StoreHandler] Routing to node %s with best embedding match", hex.EncodeToString(bestRes.NodeID))
     
     // Prepare response to route the request to the next depth
-    response.Depth = request.Depth+1
-    response.Message = fmt.Sprintf("Found next Node on depth %d", response.Depth)
-    response.QueryEmbed = request.QueryEmbed
-    response.SourceNodeID = hex.EncodeToString(selfNodeID)
-    response.SourcePeerID = nh.Kademlia.Node().RoutingTable().SelfPeerID
-    response.NextNodeID = hex.EncodeToString(bestRes.NodeID)
-    response.Found = false
-    response.Pruned= false
-
+    response := models.EmbeddingStoreResponse{
+        Depth:        request.Depth + 1,
+        Message:      fmt.Sprintf("Found next Node on depth %d", request.Depth+1),
+        SourceNodeID: hex.EncodeToString(selfNodeID),
+        SourcePeerID: nh.Kademlia.Node().RoutingTable().SelfPeerID,
+        NextNodeID:   hex.EncodeToString(bestRes.NodeID),
+        Found:        false,
+        Pruned:       false,
+        QueryEmbed: request.QueryEmbed,
+        FileEmbed: request.FileEmbed,
+    }
+        
     respJSON, err := json.Marshal(response)
     if err != nil {
         log.Printf("[StoreHandler] Error marshalling routing response: %v", err)

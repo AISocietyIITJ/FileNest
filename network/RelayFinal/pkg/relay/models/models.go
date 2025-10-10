@@ -1,12 +1,12 @@
 package models
 
 import (
-	"encoding/json"
-	"final/backend/pkg/types"
+    "encoding/json"
+    "final/backend/pkg/types"
 
-	"github.com/libp2p/go-libp2p/core/host"
-	"github.com/libp2p/go-libp2p/core/peer"
-	"github.com/multiformats/go-multiaddr"
+    "github.com/libp2p/go-libp2p/core/host"
+    "github.com/libp2p/go-libp2p/core/peer"
+    "github.com/multiformats/go-multiaddr"
 )
 
 type UserPeer struct {
@@ -24,91 +24,91 @@ type ReqFormat struct {
 }
 
 type EmbeddingStoreRequest struct {
-    Route          string    `json:"route"`
-    Type           string    `json:"type"`
-    SourceNodeID   string    `json:"source_node_id"`
-    SourcePeerID   string    `json:"source_peer_id"`
-    ReceiverPeerID string    `json:"receiver_peer_id"`
-    FileEmbed     []float64 `json:"file_embed"`
-    FilePath      string `json:"file_path"`
-    QueryEmbed    []float64 `json:"query_embed"`
-    Depth          int       `json:"depth"`
-    Threshold      float64   `json:"threshold"`
-    ResultsCount   int       `json:"results_count"`
-    TargetNodeID   string    `json:"target_node_id"`
-    Found          bool      `json:"found"`
+    Route          string    `json:"route,omitempty"`
+    Type           string    `json:"type,omitempty"`
+    SourceNodeID   string    `json:"source_node_id,omitempty"`
+    SourcePeerID   string    `json:"source_peer_id,omitempty"`
+    ReceiverPeerID string    `json:"receiver_peer_id,omitempty"`
+    FileEmbed      []float64 `json:"file_embed,omitempty"`
+    FilePath       string    `json:"file_path,omitempty"`
+    QueryEmbed     []float64 `json:"query_embed,omitempty"`
+    Depth          int       `json:"depth,omitempty"`
+    Threshold      float64   `json:"threshold,omitempty"`
+    ResultsCount   int       `json:"results_count,omitempty"`
+    TargetNodeID   string    `json:"target_node_id,omitempty"`
+    Found          bool      `json:"found,omitempty"`
 }
 
 type EmbeddingStoreResponse struct {
-    Message      string    `json:"message"`
-    QueryEmbed   []float64 `json:"query_embed"`
-    FileEmbed    []float64 `json:"file_embed"`
-    Depth        int       `json:"depth"`
-    SourceNodeID string    `json:"source_node_id"`
-    SourcePeerID string    `json:"source_peer_id"`
-    NextNodeID   string    `json:"next_node_id"`
-    Found        bool      `json:"found"`
-    Pruned       bool      `json:"pruned"`
+    Message      string    `json:"message,omitempty"`
+    QueryEmbed   []float64 `json:"query_embed,omitempty"`
+    FileEmbed    []float64 `json:"file_embed,omitempty"`
+    Depth        int       `json:"depth,omitempty"`
+    SourceNodeID string    `json:"source_node_id,omitempty"`
+    SourcePeerID string    `json:"source_peer_id,omitempty"`
+    NextNodeID   string    `json:"next_node_id,omitempty"`
+    Found        bool      `json:"found,omitempty"`
+    Pruned       bool      `json:"pruned,omitempty"`
 }
 
 type EmbeddingSearchRequest struct {
-    Route          string    `json:"route"`
-    Type           string    `json:"type"`
-    SourceNodeID   string    `json:"source_node_id"`
-    SourcePeerID   string    `json:"source_peer_id"`
-    ReceiverPeerID string    `json:"receiver_peer_id"`
-    QueryEmbed     []float64 `json:"query_embed"`
-    Depth          int       `json:"depth"`
-    Threshold      float64   `json:"threshold"`
-    ResultsCount   int       `json:"results_count"`
-    TargetNodeID   string    `json:"target_node_id"`
-    Found          bool      `json:"found"`
+    Route          string    `json:"route,omitempty"`
+    Type           string    `json:"type,omitempty"`
+    SourceNodeID   string    `json:"source_node_id,omitempty"`
+    SourcePeerID   string    `json:"source_peer_id,omitempty"`
+    ReceiverPeerID string    `json:"receiver_peer_id,omitempty"`
+    QueryEmbed     []float64 `json:"query_embed,omitempty"`
+    Depth          int       `json:"depth,omitempty"`
+    Threshold      float64   `json:"threshold,omitempty"`
+    ResultsCount   int       `json:"results_count,omitempty"`
+    TargetNodeID   string    `json:"target_node_id,omitempty"`
+    Found          bool      `json:"found,omitempty"`
 }
 
 type EmbeddingSearchResponse struct {
-    Message      string    `json:"message"`
-    Depth        int       `json:"depth"`
-    SourceNodeID string    `json:"source_node_id"`
-    SourcePeerID string    `json:"source_peer_id"`
-    NextNodeID   string    `json:"next_node_id"`
-    Found        bool      `json:"found"`
-    Pruned       bool      `json:"pruned"`
-    FileEmbeds    [][]float64 `json:"file_embed"`
+    Message      string      `json:"message,omitempty"`
+    Depth        int         `json:"depth,omitempty"`
+    SourceNodeID string      `json:"source_node_id,omitempty"`
+    SourcePeerID string      `json:"source_peer_id,omitempty"`
+    NextNodeID   string      `json:"next_node_id,omitempty"`
+    Found        bool        `json:"found,omitempty"`
+    Pruned       bool        `json:"pruned,omitempty"`
+    FileEmbeds   [][]float64 `json:"file_embed,omitempty"`
 }
 
 type PingRequest struct {
-    Type           string `json:"type"`
-    Route          string `json:"route"`
-    ReceiverPeerID string `json:"receiver_peer_id"`
-    SenderNodeID   []byte `json:"sender_node_id"`
-    SenderPeerID   string `json:"sender_peer_id"`
-    ReceiverNodeID []byte `json:"receiver_node_id"`
-    Timestamp      int64  `json:"timestamp"`
+    Type           string `json:"type,omitempty"`
+    Route          string `json:"route,omitempty"`
+    ReceiverPeerID string `json:"receiver_peer_id,omitempty"`
+    SenderNodeID   []byte `json:"sender_node_id,omitempty"`
+    SenderPeerID   string `json:"sender_peer_id,omitempty"`
+    ReceiverNodeID []byte `json:"receiver_node_id,omitempty"`
+    Timestamp      int64  `json:"timestamp,omitempty"`
 }
 
 type PingResponse struct {
-    SenderNodeID []byte `json:"sender_node_id"`
-    SenderPeerID string `json:"sender_peer_id"`
-    Timestamp    int64  `json:"timestamp"`
-    Success      bool   `json:"success"`
+    SenderNodeID []byte `json:"sender_node_id,omitempty"`
+    SenderPeerID string `json:"sender_peer_id,omitempty"`
+    Timestamp    int64  `json:"timestamp,omitempty"`
+    Success      bool   `json:"success,omitempty"`
 }
 
 // sent to kademlia node
 type FindNodeRequest struct {
-    Type           string `json:"type"`
-    Route          string `json:"route"`
-    SenderNodeID   string `json:"sender_node_id"`
-    SenderPeerID   string `json:"sender_peer_id"`
-    ReceiverNodeID string `json:"receiver_node_id"`
-    TargetNodeID       string `json:"target_node_id"` // The NodeID we want to reach
-    Timestamp      int64  `json:"timestamp"`
+    Type           string `json:"type,omitempty"`
+    Route          string `json:"route,omitempty"`
+    SenderNodeID   string `json:"sender_node_id,omitempty"`
+    SenderPeerID   string `json:"sender_peer_id,omitempty"`
+    ReceiverNodeID string `json:"receiver_node_id,omitempty"`
+    TargetNodeID   string `json:"target_node_id,omitempty"` // The NodeID we want to reach
+    Timestamp      int64  `json:"timestamp,omitempty"`
 }
 
 // sent back to user for relaying
 type FindNodeResponse struct {
-    SenderNodeID string `json:"sender_node_id"`
-    SenderPeerID string `json:"sender_peer_id"`
-    ClosestNodes []types.PeerInfo  `json:"closest_nodes"` // K closest nodes to TargetID
-    Timestamp    int64  `json:"timestamp"`
-    Found bool `json:"found"`
+    SenderNodeID string         `json:"sender_node_id,omitempty"`
+    SenderPeerID string         `json:"sender_peer_id,omitempty"`
+    ClosestNodes []types.PeerInfo `json:"closest_nodes,omitempty"` // K closest nodes to TargetID
+    Timestamp    int64          `json:"timestamp,omitempty"`
+    Found        bool           `json:"found,omitempty"`
 }
