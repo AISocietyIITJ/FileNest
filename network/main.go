@@ -180,10 +180,10 @@ func bootstrapKademlia(kademliaHandler *integration.ComprehensiveKademliaHandler
 func handleFindValueUser(p *models.UserPeer, ctx context.Context, kademliaHandler *integration.ComprehensiveKademliaHandler) {
     log.Println("🔍 Starting store process...")
     test_embedding := []float64{0.15, 0.25, 0.35, 0.45, 0.55}
-    threshold := 0.4
+    threshold := 0.
 	
     // Find Depth 1 nodes
-    targets, err := kademliaHandler.Node().FindSimilar(test_embedding, threshold, 10)
+    targets, err := kademliaHandler.Node().FindSimilar(test_embedding, threshold, 1)
     if err != nil {
 		log.Printf("Error finding a representative node ID: %v", err)
         return

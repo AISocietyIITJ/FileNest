@@ -349,6 +349,7 @@ func (nh *NetworkHandler) StoreHandler(params []byte, body map[string]any) []byt
         h := sha256.New()
         embedBytes, _ := json.Marshal(request.QueryEmbed)
         h.Write(embedBytes)
+        embedBytes = embedBytes[:20]
         
         // Find the closest node in the routing table based on the hash
         // This creates a deterministic mapping from embeddings to nodes
