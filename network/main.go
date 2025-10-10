@@ -100,7 +100,7 @@ func main() {
 
 	// Only depth peer goes to mongo
 	if(*ptype == "depth"){
-		embed := []float64{0.1,0.2,0.3,0.5,1}
+		embed := []float64{0.1,0.2,0.3,0.5,0.9}
 		if err = relayhelper.UpsertNode(decSelfNodeID, p.Host.ID().String(), embed); err != nil {
 			log.Printf("Error in upserting node to mongo: %v \n", err.Error())
 		} else {
@@ -179,7 +179,7 @@ func bootstrapKademlia(kademliaHandler *integration.ComprehensiveKademliaHandler
 
 func handleFindValueUser(p *models.UserPeer, ctx context.Context, kademliaHandler *integration.ComprehensiveKademliaHandler) {
     log.Println("🔍 Starting store process...")
-    test_embedding := []float64{0.15, 0.25, 0.35, 0.45, 0.55}
+    test_embedding := []float64{0.15, 0.25, 0.35, 0.45, 0.6}
     threshold := 0.
 	
     // Find Depth 1 nodes
@@ -349,12 +349,14 @@ func handleStoreUser(p *models.UserPeer, ctx context.Context, kademliaHandler *i
                 log.Printf("Error unmarshalling store response: %v", err)
                 break
             }
+			depth = respDec.Depth
 
             log.Printf("Store response at depth %d: Found=%t, Pruned=%t, NextNodeID=%s", 
                 depth, respDec.Found, respDec.Pruned, respDec.NextNodeID)
-		
-            // Check if we've reached max depth (successful store)
-            if depth == maxDepth {
+			
+            
+			// Check if we've reached max depth (successful store)
+            if depth > maxDepth {
                 log.Printf("Successfully stored embedding at depth %d", depth)
                 stored = true
                 break
@@ -379,12 +381,10 @@ func handleStoreUser(p *models.UserPeer, ctx context.Context, kademliaHandler *i
                 // Update for next iteration
                 currentNodeID = respDec.NextNodeID
                 currentPeerInfo = nextPeerInfo
-                depth = respDec.Depth
-            } else {
-                log.Printf("No next node provided or not found at depth %d", depth)
-                break // Try next target
-            }	
-		
+				} else {
+					log.Printf("No next node provided or not found at depth %d", depth)
+					break // Try next target
+				}						
 		}
 
 		if stored{
