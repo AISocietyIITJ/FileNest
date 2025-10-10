@@ -455,7 +455,7 @@ func handleFindNode(p *models.UserPeer, ctx context.Context, kademliaHandler *in
 		log.Printf("Received response with %d closest nodes", len(respDec.ClosestNodes))
 
 		if(respDec.Found){
-			return respDec.ClosestNodes[0], " "
+			return respDec.ClosestNodes[0], ""
 		}
 		// new nodes found, add peers to own RT. This helps in FindClosest we do above.
 		foundCloser := false

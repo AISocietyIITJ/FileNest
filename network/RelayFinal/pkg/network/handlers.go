@@ -251,28 +251,37 @@ func (nh *NetworkHandler) PingHandler(params map[string]any) []byte {
     return respJson
 }
 
-
 func (nh *NetworkHandler) StoreHandler(params []byte, body map[string]any) []byte {
     log.Printf("[StoreHandler] Received store request with params: %+v", params)
     response := models.EmbeddingStoreResponse{}
     selfNodeID := nh.Kademlia.Node().NodeID
     
+    // Parse the incoming request parameters into a structured format
     request := models.EmbeddingStoreRequest{}
     json.Unmarshal(params, &request)
 
+    // Decode the source node ID from hex string to bytes for storage operations
     decSourceNodeID, _ := hex.DecodeString(request.SourceNodeID)
-    // Store on own DB, base case
+    
+    // BASE CASE: Depth 4 - Store the file embedding at the final depth
     if(request.Depth == 4){
+        log.Println("[StoreHandler] Reached depth 4, storing file embedding in IndexedFiles")
         response.Found = true
 
-        err := nh.Kademlia.Node().IndexedFiles.StoreFileEmbedding(decSourceNodeID, request.SourcePeerID, request.FileEmbed, request.FilePath) //need to pass the params here
+        // Store the actual file embedding in the D4 database (IndexedFiles)
+        // This is the final storage location for file embeddings
+        err := nh.Kademlia.Node().IndexedFiles.StoreFileEmbedding(decSourceNodeID, request.SourcePeerID, request.FileEmbed, request.FilePath)
         if err!=nil{
             log.Printf("[StoreHandler] Could not store the D4 file embed\n")
         }
+        
+        // Update the configuration file to reflect the new storage
         serr := nh.Kademlia.Node().IndexedFiles.UpdateD4Config(4, "D4Config.json")
         if serr!=nil{
             log.Printf("[StoreHandler] Config file could not be updated while storing at D4: %v", serr)
         }
+        
+        // Prepare success response for depth 4 storage
         response.Pruned = false
         response.Message = "Stored file on last depth"
         response.QueryEmbed = request.QueryEmbed
@@ -280,7 +289,7 @@ func (nh *NetworkHandler) StoreHandler(params []byte, body map[string]any) []byt
         response.NextNodeID = ""
         response.SourceNodeID = hex.EncodeToString(selfNodeID)
         response.SourcePeerID = nh.Kademlia.Node().RoutingTable().SelfPeerID
-        response.Depth = request.Depth+1 //depth=5 now
+        response.Depth = request.Depth+1 // Increment to depth 5 to indicate completion
 
         respJSON, err := json.Marshal(response)
         if err != nil {
@@ -290,77 +299,100 @@ func (nh *NetworkHandler) StoreHandler(params []byte, body map[string]any) []byt
         return respJSON
     }
 
+    // RECURSIVE CASE: Depths 1-3 - Find the next node to forward the request to
+    log.Printf("[StoreHandler] At depth %d, searching for similar embeddings to find next hop", request.Depth)
+    
     var cmpRes []storage.EmbeddingResult
     var err error
-    // sourceNodeID, _ := hex.DecodeString(request.SourceNodeID)
+    
+    // Search for similar embeddings in the appropriate depth database
+    // Each depth has its own database storing node embeddings for that level
     switch request.Depth {
     case 1:
+        // Search D2DB for nodes that have similar embeddings at depth 2
         cmpRes, err = nh.Kademlia.Node().D2DB.FindSimilar(request.QueryEmbed, request.Threshold, request.ResultsCount)
         if err != nil {
-            log.Printf("[StoreHandler] Error in FindSimilar D1: %v", err)
+            log.Printf("[StoreHandler] Error in FindSimilar D2DB: %v", err)
             return nil
         }
-        // err := nh.Kademlia.Node().D2DB.UpdateConfig(1, "D1Config.json")
-        // if err!=nil{
-        //     log.Printf("[StoreHandler] Config file could not be updated while storing at D2: %v", err)
-        // }
+        log.Println("[StoreHandler] Searched D2DB for similar embeddings")
+        
     case 2:
+        // Search D3DB for nodes that have similar embeddings at depth 3
         cmpRes, err = nh.Kademlia.Node().D3DB.FindSimilar(request.QueryEmbed, request.Threshold, request.ResultsCount)
         if err != nil {
-            log.Printf("[StoreHandler] Error in FindSimilar D2: %v", err)
+            log.Printf("[StoreHandler] Error in FindSimilar D3DB: %v", err)
             return nil
         }
+        log.Println("[StoreHandler] Searched D3DB for similar embeddings")
+        
     case 3:
+        // Search D4DB for nodes that have similar embeddings at depth 4
         cmpRes, err = nh.Kademlia.Node().D4DB.FindSimilar(request.QueryEmbed, request.Threshold, request.ResultsCount)
         if err != nil {
-            log.Printf("[StoreHandler] Error in FindSimilar D3: %v", err)
+            log.Printf("[StoreHandler] Error in FindSimilar D4DB: %v", err)
             return nil
         }
+        log.Println("[StoreHandler] Searched D4DB for similar embeddings")
+        
     default:
         log.Printf("[StoreHandler] unexpected depth: %d", request.Depth)
         return nil
     }
 
-
-    // empty DnDB 
+    // CLUSTER CREATION CASE: No similar embeddings found - create a new cluster
     if(len(cmpRes) == 0){
+        log.Printf("[StoreHandler] No similar embeddings found at depth %d, creating new cluster", request.Depth)
+        
+        // Hash the query embedding to determine which node should store it
         h := sha256.New()
         embedBytes, _ := json.Marshal(request.QueryEmbed)
         h.Write(embedBytes)
         
+        // Find the closest node in the routing table based on the hash
+        // This creates a deterministic mapping from embeddings to nodes
         closestNodes := nh.Kademlia.Node().RoutingTable().FindClosest(embedBytes, 1)
         closestNode := closestNodes[0]
+        log.Printf("[StoreHandler] Selected closest node %s to store new cluster", hex.EncodeToString(closestNode.NodeID))
+        
+        // Store the query embedding as a new cluster center in the appropriate depth database
         switch request.Depth {
         case 1:
-            //DnDB stores nth depth nodes
+            // Store the embedding in D2DB to indicate this node handles depth 2 queries for this embedding cluster
             err = nh.Kademlia.Node().D2DB.StoreNodeEmbedding(closestNode.NodeID, closestNode.PeerID, request.QueryEmbed)
             if err != nil {
-                log.Printf("[FindValueHandler] Error in FindSimilar D1: %v", err)
+                log.Printf("[StoreHandler] Error storing in D2DB: %v", err)
                 return nil
             }
             nh.Kademlia.Node().D2DB.UpdateConfig(1, "D1Config.json")
+            log.Println("[StoreHandler] Created new cluster in D2DB")
 
         case 2:
+            // Store the embedding in D3DB to indicate this node handles depth 3 queries for this embedding cluster
             err = nh.Kademlia.Node().D3DB.StoreNodeEmbedding(closestNode.NodeID, closestNode.PeerID, request.QueryEmbed)
             if err != nil {
-                log.Printf("[FindValueHandler] Error in FindSimilar D2: %v", err)
+                log.Printf("[StoreHandler] Error storing in D3DB: %v", err)
                 return nil   
             }
             nh.Kademlia.Node().D3DB.UpdateConfig(1, "D1Config.json")
+            log.Println("[StoreHandler] Created new cluster in D3DB")
         
         case 3:
+            // Store the embedding in D4DB to indicate this node handles depth 4 queries for this embedding cluster
             err = nh.Kademlia.Node().D4DB.StoreNodeEmbedding(closestNode.NodeID, closestNode.PeerID, request.QueryEmbed)
             if err != nil {
-                log.Printf("[FindValueHandler] Error in FindSimilar D3: %v", err)
+                log.Printf("[StoreHandler] Error storing in D4DB: %v", err)
                 return nil
             }
             nh.Kademlia.Node().D4DB.UpdateConfig(1, "D1Config.json")
+            log.Println("[StoreHandler] Created new cluster in D4DB")
 
         default:
-            log.Printf("[FindValueHandler] unexpected depth: %d", request.Depth)
+            log.Printf("[StoreHandler] unexpected depth: %d", request.Depth)
             return nil
         }
 
+        // Prepare response indicating a new cluster was created and routing to the chosen node
         response.Message = "Stored embed in closest hashed node."
         response.Pruned = false
         response.Found = false
@@ -372,14 +404,20 @@ func (nh *NetworkHandler) StoreHandler(params []byte, body map[string]any) []byt
 
         respJSON, err := json.Marshal(response)
         if err != nil {
-            log.Printf("[FindValueHandler] Error marshalling response after pruning: %v", err)
+            log.Printf("[StoreHandler] Error marshalling response after cluster creation: %v", err)
             return nil
         }
         return respJSON
     }
 
-    //Not pruned,  Found a suitable cluster
-    bestRes := cmpRes[0] // Closest matching embed ki node
+    // ROUTING CASE: Similar embeddings found - route to the most similar cluster
+    log.Printf("[StoreHandler] Found %d similar embeddings, routing to best match", len(cmpRes))
+    
+    // Select the node with the most similar embedding as the next hop
+    bestRes := cmpRes[0] // Results are sorted by similarity, so first is best match
+    log.Printf("[StoreHandler] Routing to node %s with best embedding match", hex.EncodeToString(bestRes.NodeID))
+    
+    // Prepare response to route the request to the next depth
     response.Depth = request.Depth+1
     response.Message = fmt.Sprintf("Found next Node on depth %d", response.Depth)
     response.QueryEmbed = request.QueryEmbed
@@ -391,7 +429,7 @@ func (nh *NetworkHandler) StoreHandler(params []byte, body map[string]any) []byt
 
     respJSON, err := json.Marshal(response)
     if err != nil {
-        log.Printf("[StoreHandler] Error marshalling response: %v", err)
+        log.Printf("[StoreHandler] Error marshalling routing response: %v", err)
         return nil
     }
     return respJSON
