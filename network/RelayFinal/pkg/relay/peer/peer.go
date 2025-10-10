@@ -252,6 +252,7 @@ func Start(dp *models.UserPeer, ctx context.Context) error {
 
     log.Println("[DEBUG]Opened stream to relay successsfully")
     reqJson, err := json.Marshal(reqSent)
+	reqJson = append(reqJson, '\n')
     if err != nil {
         log.Printf("[DEBUG]Error marshalling the req to be sent: %v", err)
         return err
