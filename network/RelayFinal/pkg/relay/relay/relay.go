@@ -1,8 +1,12 @@
 package main
 
 import (
+	"bufio"
+	"bytes"
 	"crypto/rand"
 	"crypto/sha256"
+
+	// "final/network/RelayFinal/pkg/generalpeer/models"
 	"final/network/RelayFinal/pkg/relay/helpers"
 	"io"
 
@@ -251,11 +255,11 @@ func handleDepthStream(s network.Stream) {
 	fmt.Println("[DEBUG] Incoming Depth stream from", s.Conn().RemoteMultiaddr())
 	defer s.Close()
 	//reader := bufio.NewReader(s)
-	decoder := json.NewDecoder(s)
+	reader := bufio.NewReader(s)
 
 	for {
-		var req ReqFormat
-		err := decoder.Decode(&req)
+		// Decode into req, but yahan pe dikkat aa rahi hai  
+		line, err := reader.ReadBytes('\n')
 		if err != nil {
 			// io.EOF means the other side closed the connection cleanly.
 			if err != io.EOF {
@@ -263,6 +267,19 @@ func handleDepthStream(s network.Stream) {
 			}
 			return // Exit the loop on any error or clean disconnect.
 		}
+
+        line = bytes.TrimRight(line, "\r\n")
+        if len(line) == 0 {
+			continue // Skip empty lines
+        }
+
+
+		var req ReqFormat
+        if err := json.Unmarshal(line, &req); err != nil {
+            fmt.Printf("[DEBUG] Error unmarshaling JSON at relay: %v (payload=%q)\n", err, line)
+            continue
+        }
+
 		fmt.Printf("Req by user is: %+v \n", req)
 
 		//peer to relay register request
@@ -495,7 +512,7 @@ func handleDepthStream(s network.Stream) {
 				return
 			}
 			fmt.Printf("[Debug]Resp from %s : %s \n", targetID.String(), string(respBody))
-
+			respBody = append(respBody, '\n')
 			_, err = s.Write(respBody)
 			if err != nil {
 				fmt.Println("[DEBUG]Error sending response back:", err)

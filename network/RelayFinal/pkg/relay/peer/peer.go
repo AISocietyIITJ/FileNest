@@ -399,10 +399,12 @@ func Send(dp *models.UserPeer, ctx context.Context, targetPeerID string, reqPara
 	log.Println(jsonReqRelay)
 
 	stream.Write(jsonReqRelay)
-
 	log.Println("[DEBUG]Msg req sent to relay, waiting for ack")
+
+
 	reader := bufio.NewReader(stream)
 	log.Println("[DEBUG]Reading response from relay")
+	
 	var resp = make([]byte, 1024*16)
 	reader.Read(resp)
 	resp = bytes.TrimRight(resp, "\x00")
