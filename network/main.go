@@ -6,7 +6,6 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"encoding/json"
-	"final/backend/pkg/identity"
 	"final/backend/pkg/integration"
 	"final/backend/pkg/types"
 	genmodels "final/network/RelayFinal/pkg/generalpeer/models"
@@ -36,12 +35,6 @@ func main() {
 	ptype := flag.String("type", "user", "Upload a file to the network")
 	store := flag.Bool("store", false, "Upload a file to the network")
 	flag.Parse()
-
-	// ---- Load Node ID ----
-	SourceNodeID, err := identity.LoadOrCreateNodeID("")
-	if err != nil {
-		log.Println("Could not load/create the node id")
-	}
 
 	// ---- Setup ML transport ----
 	mlChan := make(chan genmodels.ClusterWrapper, 10)
@@ -127,7 +120,7 @@ func main() {
 
 	// ---- Handle CLI Actions ----
 	if *findval {
-		handleFindValueUser(p, ctx, kademliaHandler, SourceNodeID)
+		handleFindValueUser(p, ctx, kademliaHandler)
 	}
 
 	if *store {
@@ -184,7 +177,7 @@ func bootstrapKademlia(kademliaHandler *integration.ComprehensiveKademliaHandler
 	}
 }
 
-func handleFindValueUser(p *models.UserPeer, ctx context.Context, kademliaHandler *integration.ComprehensiveKademliaHandler, SourceNodeID []byte) {
+func handleFindValueUser(p *models.UserPeer, ctx context.Context, kademliaHandler *integration.ComprehensiveKademliaHandler) {
     log.Println("🔍 Starting store process...")
     test_embedding := []float64{0.15, 0.25, 0.35, 0.45, 0.55}
     threshold := 0.4
@@ -322,7 +315,6 @@ func handleStoreUser(p *models.UserPeer, ctx context.Context, kademliaHandler *i
             continue 
         }
         log.Printf("Found initial target peer: %+v", currentPeerInfo)
-
 
         currentNodeID := targetNodeID
         depth := 1
