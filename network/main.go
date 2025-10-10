@@ -391,7 +391,7 @@ func handleStoreUser(p *models.UserPeer, ctx context.Context, kademliaHandler *i
             log.Println("✅ Store process completed successfully")
             return // Success, no need to try other targets
         }
-
+		
 	}
 }
 
@@ -426,7 +426,7 @@ func handleFindNode(p *models.UserPeer, ctx context.Context, kademliaHandler *in
 		// mark current peer as contacted
 		contacted[nextPeer.PeerID] = true
 		
-		log.Printf("Querying peer %s for target %s", nextPeer.PeerID, TargetNodeID)
+		log.Printf("Querying peer %s for target %s", hex.EncodeToString(nextPeer.NodeID), TargetNodeID)
 		params := models.FindNodeRequest{
 			Type: "GET",
 			Route: "find_node",

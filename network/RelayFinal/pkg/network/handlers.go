@@ -46,6 +46,24 @@ func (nh *NetworkHandler) FindNodeHandler(params map[string]any) []byte {
 
     // Find k closest peers in own RT
     strTargetNodeID, _ := hex.DecodeString(req.TargetNodeID)
+
+    //this node is the target. return own pid, nid
+    if(req.TargetNodeID == hex.EncodeToString(nh.Kademlia.Node().NodeID)){
+        var ownInfo []types.PeerInfo
+        ownInfo = append(ownInfo, types.PeerInfo{NodeID: nh.Kademlia.Node().NodeID, PeerID: nh.Kademlia.Node().PeerID})
+        response := models.FindNodeResponse{
+            SenderNodeID: hex.EncodeToString(nh.Kademlia.Node().NodeID),
+            SenderPeerID: nh.Kademlia.Node().PeerID,
+            ClosestNodes: ownInfo,
+            Found: true,
+        }
+        respJSON, err := json.Marshal(response)
+        if err != nil {
+            log.Printf("[FindNodeHandler] Error marshalling response: %v", err)
+            return nil
+        }
+        return respJSON
+    }
     closestPeers := nh.Kademlia.Node().RoutingTable().FindClosest(strTargetNodeID, 20)
     if len(closestPeers) == 0 {
         log.Println("[FindNodeHandler] Could not find any peers in the routing table.")
@@ -72,7 +90,7 @@ func (nh *NetworkHandler) FindNodeHandler(params map[string]any) []byte {
         SenderNodeID: hex.EncodeToString(nh.Kademlia.Node().NodeID),
         SenderPeerID: nh.Kademlia.Node().PeerID,
         ClosestNodes: closestPeers,
-        Found: true,
+        Found: false,
     }
     respJSON, err := json.Marshal(response)
     if err != nil {
