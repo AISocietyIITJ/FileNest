@@ -234,14 +234,14 @@ func handleFindValueUser(p *models.UserPeer, ctx context.Context, kademliaHandle
 				break
 			}
 
-			var respDec models.EmbeddingStoreResponse
+			var respDec models.EmbeddingSearchResponse
 			if err := json.Unmarshal(resp, &respDec); err != nil {
 				log.Printf("Error unmarshalling store response: %v", err)
 				break
 			}
 			depth = respDec.Depth
 
-			log.Printf("Store response at depth %d: Found=%t, Pruned=%t, NextNodeID=%s",
+			log.Printf("Find Value response at depth %d: Found=%t, Pruned=%t, NextNodeID=%s",
 				depth, respDec.Found, respDec.Pruned, respDec.NextNodeID)
 
 			// Check if we've reached max depth (successful store)
@@ -277,7 +277,7 @@ func handleFindValueUser(p *models.UserPeer, ctx context.Context, kademliaHandle
 		}
 
 		if stored {
-			log.Println("✅ Store process completed successfully")
+			log.Println("✅ Find Value process completed successfully")
 			return // Success, no need to try other targets
 		}
 
