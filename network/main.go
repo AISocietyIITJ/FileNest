@@ -178,12 +178,13 @@ func bootstrapKademlia(kademliaHandler *integration.ComprehensiveKademliaHandler
 }
 
 func handleFindValueUser(p *models.UserPeer, ctx context.Context, kademliaHandler *integration.ComprehensiveKademliaHandler) {
-	log.Println("🔍 Starting store process...")
-	test_embedding := []float64{0.15, 0.25, 0.35, 0.45, 0.6}
-	threshold := 0.
+	log.Println("🔍 Starting find value process...")
+	test_embedding := []float64{0.15, 0.25, 0.35, 0.45, 0.55}
+	// test_filepath := "home/ma/chudao/kys"
+	threshold := 0.4
 
 	// Find Depth 1 nodes
-	targets, err := kademliaHandler.Node().FindSimilar(test_embedding, threshold, 1)
+	targets, err := kademliaHandler.Node().FindSimilar(test_embedding, threshold, 10)
 	if err != nil {
 		log.Printf("Error finding a representative node ID: %v", err)
 		return
@@ -225,6 +226,7 @@ func handleFindValueUser(p *models.UserPeer, ctx context.Context, kademliaHandle
 				QueryEmbed:     test_embedding,
 				Depth:          depth,
 				Found:          false,
+				ResultsCount:   1,
 			}
 			resp, err := helpers.SendJSON(p, ctx, currentPeerInfo.PeerID, params, nil)
 			if err != nil {
@@ -237,12 +239,13 @@ func handleFindValueUser(p *models.UserPeer, ctx context.Context, kademliaHandle
 				log.Printf("Error unmarshalling store response: %v", err)
 				break
 			}
+			depth = respDec.Depth
 
 			log.Printf("Store response at depth %d: Found=%t, Pruned=%t, NextNodeID=%s",
 				depth, respDec.Found, respDec.Pruned, respDec.NextNodeID)
 
 			// Check if we've reached max depth (successful store)
-			if depth == maxDepth {
+			if depth > maxDepth {
 				log.Printf("Successfully stored embedding at depth %d", depth)
 				stored = true
 				break
@@ -254,7 +257,7 @@ func handleFindValueUser(p *models.UserPeer, ctx context.Context, kademliaHandle
 			}
 
 			// Check if we found a suitable cluster and got next node
-			if respDec.Found && respDec.NextNodeID != "" {
+			if respDec.NextNodeID != "" {
 				log.Printf("Found suitable cluster, moving to next depth with NodeID: %s", respDec.NextNodeID)
 
 				// Find peer info for the next node
@@ -267,12 +270,10 @@ func handleFindValueUser(p *models.UserPeer, ctx context.Context, kademliaHandle
 				// Update for next iteration
 				currentNodeID = respDec.NextNodeID
 				currentPeerInfo = nextPeerInfo
-				depth = respDec.Depth
 			} else {
 				log.Printf("No next node provided or not found at depth %d", depth)
 				break // Try next target
 			}
-
 		}
 
 		if stored {
@@ -282,6 +283,7 @@ func handleFindValueUser(p *models.UserPeer, ctx context.Context, kademliaHandle
 
 	}
 }
+
 
 func handleStoreUser(p *models.UserPeer, ctx context.Context, kademliaHandler *integration.ComprehensiveKademliaHandler) {
 	log.Println("🔍 Starting store process...")
