@@ -21,21 +21,18 @@ type SQLiteStorage struct {
 	db *gorm.DB
 }
 
-func NewSQLiteStorage(dbPath string) (*SQLiteStorage, error) {
+func NewSQLiteStorage(dbPath string, model interface{}) (*SQLiteStorage, error) {
 	db, err := gorm.Open(sqlite.Open(dbPath), &gorm.Config{})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to open DB: %w", err)
 	}
 
-	// Auto migrate the schema - now using local D1TVMap struct
-	err = db.AutoMigrate(&D1TVMap{})
-	if err != nil {
-		return nil, err
+	// Auto migrate the provided model
+	if err := db.AutoMigrate(model); err != nil {
+		return nil, fmt.Errorf("auto migrate failed: %w", err)
 	}
 
-	return &SQLiteStorage{
-		db: db,
-	}, nil
+	return &SQLiteStorage{db: db}, nil
 }
 
 // Find embed map nodes similar to query embed
@@ -57,7 +54,7 @@ func (s *SQLiteStorage) FindSimilar(queryEmbed []float64, threshold float64, lim
 		// Only include embeddings that meet the threshold
 		if similarity >= threshold {
 			results = append(results, EmbeddingResult{
-				NodeID:     ne.NodeID,
+				NodeID: ne.NodeID,
 				// PeerID:     ne.PeerID,
 				Embedding:  []float64(ne.Embedding),
 				Similarity: similarity,

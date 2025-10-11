@@ -15,38 +15,40 @@ type KademliaNode struct {
 	PeerID       string            // Ephemeral libp2p PeerID
 	routingTable *RoutingTable     // stores nodeIDs which have contacted the Node before
 	storage      storage.Interface // stores nodeIDs which match the TV of this node
-	D2DB		 storage.Interface
-	D3DB		 storage.Interface
-	D4DB		 storage.Interface
-	IndexedFiles   storage.Interface
+	D2DB         storage.Interface
+	D3DB         storage.Interface
+	D4DB         storage.Interface
+	IndexedFiles storage.Interface
 	network      NetworkInterface
 }
 
 func NewKademliaNode(nodeID []byte, peerID string, network NetworkInterface, dbPath string) (*KademliaNode, error) {
-	// RoutingTable returns the node's routing table (exported getter)}
-	// Initialize SQLite storage
-	// ADD THIS VALIDATION:
 	if len(nodeID) != 20 {
 		return nil, fmt.Errorf("nodeID must be 20 bytes (160 bits), got %d", len(nodeID))
 	}
 
-	sqliteStorage, err := storage.NewSQLiteStorage(dbPath)
+	// Initialize all storage DBs with correct models
+	D1DB, err := storage.NewSQLiteStorage("./d1tv.db", &storage.D1TVMap{})
 	if err != nil {
 		return nil, err
 	}
-	D2DB, err := storage.NewSQLiteStorage("./d2tv.db")
+
+	D2DB, err := storage.NewSQLiteStorage("./d2tv.db", &storage.D1TVMap{})
 	if err != nil {
 		return nil, err
 	}
-	D3DB, err := storage.NewSQLiteStorage("./d3tv.db")
+
+	D3DB, err := storage.NewSQLiteStorage("./d3tv.db", &storage.D1TVMap{})
 	if err != nil {
 		return nil, err
 	}
-	D4DB, err := storage.NewSQLiteStorage("./d4tv.db")
+
+	D4DB, err := storage.NewSQLiteStorage("./d4tv.db", &storage.D1TVMap{})
 	if err != nil {
 		return nil, err
 	}
-	IndexedFiles, err := storage.NewSQLiteStorage("./IndexedFiles.db")
+
+	IndexedFiles, err := storage.NewSQLiteStorage("./file_records.db", &storage.FileRecord{})
 	if err != nil {
 		return nil, err
 	}
@@ -54,12 +56,12 @@ func NewKademliaNode(nodeID []byte, peerID string, network NetworkInterface, dbP
 	return &KademliaNode{
 		NodeID:       nodeID,
 		PeerID:       peerID,
-		routingTable: NewRoutingTable(nodeID, peerID, 20), // K=20
-		storage:      sqliteStorage,                       // Initialize D1 Storage
-		D2DB: D2DB,
-		D3DB: D3DB,
-		D4DB: D4DB,
-		IndexedFiles: IndexedFiles,
+		routingTable: NewRoutingTable(nodeID, peerID, 20),
+		storage:      D1DB, // D1 storage
+		D2DB:         D2DB,
+		D3DB:         D3DB,
+		D4DB:         D4DB,
+		IndexedFiles: IndexedFiles, // File embeddings
 		network:      network,
 	}, nil
 }
@@ -132,7 +134,6 @@ func (k *KademliaNode) CosineSimilarity(a, b []float64) (float64, error) {
 // 	// No suitable peers found
 // 	return nil
 // }
-
 
 // // hashEmbedding converts an embedding vector to a hash for routing decisions
 // func (k *KademliaNode) hashEmbedding(embedding []float64) []byte {
