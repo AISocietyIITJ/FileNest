@@ -100,7 +100,7 @@ func main() {
 
 	// Only depth peer goes to mongo
 	if *ptype == "depth" {
-		embed := []float64{0.1,0.2,0.3,0.5,0.9}
+		embed := []float64{0.1, 0.2, 0.3, 0.5, 1}
 		if err = relayhelper.UpsertNode(decSelfNodeID, p.Host.ID().String(), embed); err != nil {
 			log.Printf("Error in upserting node to mongo: %v \n", err.Error())
 		} else {
@@ -179,112 +179,6 @@ func bootstrapKademlia(kademliaHandler *integration.ComprehensiveKademliaHandler
 
 func handleFindValueUser(p *models.UserPeer, ctx context.Context, kademliaHandler *integration.ComprehensiveKademliaHandler) {
 	log.Println("🔍 Starting store process...")
-	test_embedding := []float64{0.15, 0.25, 0.35, 0.45, 0.6}
-	threshold := 0.
-
-	// Find Depth 1 nodes
-	targets, err := kademliaHandler.Node().FindSimilar(test_embedding, threshold, 1)
-	if err != nil {
-		log.Printf("Error finding a representative node ID: %v", err)
-		return
-	}
-	if len(targets) == 0 {
-		log.Println("Could not find any bootstrap node ID to begin the store process.")
-		return
-	}
-
-	//send req to all suitable peers one by one (Change to goroutine later)
-	for _, target := range targets {
-		targetNodeID := hex.EncodeToString(target.NodeID)
-		log.Printf("Attempting to store via target: %s", targetNodeID)
-
-		// Get the peer ID for the target node
-		currentPeerInfo, errStr := handleFindNode(p, ctx, kademliaHandler, targetNodeID)
-		if errStr != "" {
-			log.Printf("Error finding initial target peer: %s", errStr)
-			continue
-		}
-		log.Printf("Found initial target peer: %+v", currentPeerInfo)
-
-		currentNodeID := targetNodeID
-		depth := 1
-		maxDepth := 4
-		stored := false
-
-		for depth <= maxDepth {
-			log.Printf("Store attempt at depth %d for NodeID: %s", depth, currentNodeID)
-
-			// Build request for current target
-			params := models.EmbeddingSearchRequest{
-				Type:           "POST",
-				Route:          "store",
-				SourceNodeID:   hex.EncodeToString(kademliaHandler.Node().NodeID),
-				SourcePeerID:   kademliaHandler.Node().PeerID,
-				TargetNodeID:   currentNodeID,
-				ReceiverPeerID: currentPeerInfo.PeerID,
-				QueryEmbed:     test_embedding,
-				Depth:          depth,
-				Found:          false,
-			}
-			resp, err := helpers.SendJSON(p, ctx, currentPeerInfo.PeerID, params, nil)
-			if err != nil {
-				log.Printf("Error sending JSON to peer %s: %v", currentPeerInfo.PeerID, err)
-				break
-			}
-
-			var respDec models.EmbeddingStoreResponse
-			if err := json.Unmarshal(resp, &respDec); err != nil {
-				log.Printf("Error unmarshalling store response: %v", err)
-				break
-			}
-
-			log.Printf("Store response at depth %d: Found=%t, Pruned=%t, NextNodeID=%s",
-				depth, respDec.Found, respDec.Pruned, respDec.NextNodeID)
-
-			// Check if we've reached max depth (successful store)
-			if depth == maxDepth {
-				log.Printf("Successfully stored embedding at depth %d", depth)
-				stored = true
-				break
-			}
-			//Pruned case, try next peer
-			if respDec.Pruned {
-				log.Printf("Search pruned at depth %d", depth)
-				break
-			}
-
-			// Check if we found a suitable cluster and got next node
-			if respDec.Found && respDec.NextNodeID != "" {
-				log.Printf("Found suitable cluster, moving to next depth with NodeID: %s", respDec.NextNodeID)
-
-				// Find peer info for the next node
-				nextPeerInfo, errStr := handleFindNode(p, ctx, kademliaHandler, respDec.NextNodeID)
-				if errStr != "" {
-					log.Printf("Error finding next peer for NodeID %s: %s", respDec.NextNodeID, errStr)
-					break // Try next target
-				}
-
-				// Update for next iteration
-				currentNodeID = respDec.NextNodeID
-				currentPeerInfo = nextPeerInfo
-				depth = respDec.Depth
-			} else {
-				log.Printf("No next node provided or not found at depth %d", depth)
-				break // Try next target
-			}
-
-		}
-
-		if stored {
-			log.Println("✅ Store process completed successfully")
-			return // Success, no need to try other targets
-		}
-
-	}
-}
-
-func handleStoreUser(p *models.UserPeer, ctx context.Context, kademliaHandler *integration.ComprehensiveKademliaHandler) {
-	log.Println("🔍 Starting store process...")
 	test_embedding := []float64{0.15, 0.25, 0.35, 0.45, 0.55}
 	test_filepath := "home/ma/chudao/kys"
 	threshold := 0.4
@@ -330,7 +224,7 @@ func handleStoreUser(p *models.UserPeer, ctx context.Context, kademliaHandler *i
 				TargetNodeID:   currentNodeID,
 				ReceiverPeerID: currentPeerInfo.PeerID,
 				FilePath:       test_filepath,
-				FileEmbed:     test_embedding,
+				FileEmbed:      test_embedding,
 				Depth:          depth,
 				Found:          false,
 			}
@@ -384,6 +278,114 @@ func handleStoreUser(p *models.UserPeer, ctx context.Context, kademliaHandler *i
 
 		if stored {
 			log.Println("✅ Store process completed successfully")
+			return // Success, no need to try other targets
+		}
+
+	}
+}
+
+func handleStoreUser(p *models.UserPeer, ctx context.Context, kademliaHandler *integration.ComprehensiveKademliaHandler) {
+	log.Println("🔍 Starting find value process...")
+	query_embedding := []float64{0.15, 0.25, 0.35, 0.45, 0.55}
+	// test_filepath := "home/ma/chudao/kys"
+	threshold := 0.4
+
+	// Find Depth 1 nodes
+	targets, err := kademliaHandler.Node().FindSimilar(query_embedding, threshold, 10)
+	if err != nil {
+		log.Printf("Error finding a representative node ID: %v", err)
+		return
+	}
+	if len(targets) == 0 {
+		log.Println("Could not find any bootstrap node ID to begin the store process.")
+		return
+	}
+
+	//send req to all suitable peers one by one (Change to goroutine later)
+	for _, target := range targets {
+		targetNodeID := hex.EncodeToString(target.NodeID)
+		log.Printf("Attempting to store via target: %s", targetNodeID)
+
+		// Get the peer ID for the target node
+		currentPeerInfo, errStr := handleFindNode(p, ctx, kademliaHandler, targetNodeID)
+		if errStr != "" {
+			log.Printf("Error finding initial target peer: %s", errStr)
+			continue
+		}
+		log.Printf("Found initial target peer: %+v", currentPeerInfo)
+
+		currentNodeID := targetNodeID
+		depth := 1
+		maxDepth := 4
+		stored := false
+
+		for depth <= maxDepth {
+			log.Printf("Store attempt at depth %d for NodeID: %s", depth, currentNodeID)
+
+			// Build request for current target
+			params := models.EmbeddingSearchRequest{
+				Type:           "POST",
+				Route:          "store",
+				SourceNodeID:   hex.EncodeToString(kademliaHandler.Node().NodeID),
+				SourcePeerID:   kademliaHandler.Node().PeerID,
+				TargetNodeID:   currentNodeID,
+				ReceiverPeerID: currentPeerInfo.PeerID,
+				QueryEmbed:     query_embedding,
+				Depth:          depth,
+				Found:          false,
+				Threshold:      threshold,
+				ResultsCount:   1,
+			}
+			resp, err := helpers.SendJSON(p, ctx, currentPeerInfo.PeerID, params, nil)
+			if err != nil {
+				log.Printf("Error sending JSON to peer %s: %v", currentPeerInfo.PeerID, err)
+				break
+			}
+
+			var respDec models.EmbeddingStoreResponse
+			if err := json.Unmarshal(resp, &respDec); err != nil {
+				log.Printf("Error unmarshalling find value response: %v", err)
+				break
+			}
+			depth = respDec.Depth
+
+			log.Printf("Store response at depth %d: Found=%t, Pruned=%t, NextNodeID=%s",
+				depth, respDec.Found, respDec.Pruned, respDec.NextNodeID)
+
+			// Check if we've reached max depth (successful store)
+			if depth > maxDepth {
+				log.Printf("Successfully stored embedding at depth %d", depth)
+				stored = true
+				break
+			}
+			//Pruned case, try next peer
+			if respDec.Pruned {
+				log.Printf("Search pruned at depth %d", depth)
+				break
+			}
+
+			// Check if we found a suitable cluster and got next node
+			if respDec.NextNodeID != "" {
+				log.Printf("Found suitable cluster, moving to next depth with NodeID: %s", respDec.NextNodeID)
+
+				// Find peer info for the next node
+				nextPeerInfo, errStr := handleFindNode(p, ctx, kademliaHandler, respDec.NextNodeID)
+				if errStr != "" {
+					log.Printf("Error finding next peer for NodeID %s: %s", respDec.NextNodeID, errStr)
+					break // Try next target
+				}
+
+				// Update for next iteration
+				currentNodeID = respDec.NextNodeID
+				currentPeerInfo = nextPeerInfo
+			} else {
+				log.Printf("No next node provided or not found at depth %d", depth)
+				break // Try next target
+			}
+		}
+
+		if stored {
+			log.Println("✅ Find Value process completed successfully")
 			return // Success, no need to try other targets
 		}
 
