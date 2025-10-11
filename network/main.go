@@ -178,9 +178,9 @@ func bootstrapKademlia(kademliaHandler *integration.ComprehensiveKademliaHandler
 }
 
 func handleFindValueUser(p *models.UserPeer, ctx context.Context, kademliaHandler *integration.ComprehensiveKademliaHandler) {
-	log.Println("🔍 Starting store process...")
+	log.Println("🔍 Starting find value process...")
 	test_embedding := []float64{0.15, 0.25, 0.35, 0.45, 0.55}
-	test_filepath := "home/ma/chudao/kys"
+	// test_filepath := "home/ma/chudao/kys"
 	threshold := 0.4
 
 	// Find Depth 1 nodes
@@ -216,17 +216,17 @@ func handleFindValueUser(p *models.UserPeer, ctx context.Context, kademliaHandle
 			log.Printf("Store attempt at depth %d for NodeID: %s", depth, currentNodeID)
 
 			// Build request for current target
-			params := models.EmbeddingStoreRequest{
+			params := models.EmbeddingSearchRequest{
 				Type:           "POST",
 				Route:          "store",
 				SourceNodeID:   hex.EncodeToString(kademliaHandler.Node().NodeID),
 				SourcePeerID:   kademliaHandler.Node().PeerID,
 				TargetNodeID:   currentNodeID,
 				ReceiverPeerID: currentPeerInfo.PeerID,
-				FilePath:       test_filepath,
-				FileEmbed:      test_embedding,
+				QueryEmbed:     test_embedding,
 				Depth:          depth,
 				Found:          false,
+				ResultsCount:   1,
 			}
 			resp, err := helpers.SendJSON(p, ctx, currentPeerInfo.PeerID, params, nil)
 			if err != nil {
