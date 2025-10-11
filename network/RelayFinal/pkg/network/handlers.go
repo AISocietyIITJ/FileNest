@@ -284,7 +284,6 @@ func (nh *NetworkHandler) StoreHandler(params []byte, body map[string]any) []byt
             Found:        true,
             Pruned:       false,
             Message:      "Stored file on last depth",
-            QueryEmbed:   request.QueryEmbed,
             FileEmbed:    request.FileEmbed,
             NextNodeID:   "",
             SourceNodeID: hex.EncodeToString(selfNodeID),
@@ -311,7 +310,7 @@ func (nh *NetworkHandler) StoreHandler(params []byte, body map[string]any) []byt
     switch request.Depth {
     case 1:
         // Search D2DB for nodes that have similar embeddings at depth 2
-        cmpRes, err = nh.Kademlia.Node().D2DB.FindSimilar(request.QueryEmbed, request.Threshold, request.ResultsCount)
+        cmpRes, err = nh.Kademlia.Node().D2DB.FindSimilar(request.FileEmbed, request.Threshold, request.ResultsCount)
         if err != nil {
             log.Printf("[StoreHandler] Error in FindSimilar D2DB: %v", err)
             return nil
@@ -320,7 +319,7 @@ func (nh *NetworkHandler) StoreHandler(params []byte, body map[string]any) []byt
         
     case 2:
         // Search D3DB for nodes that have similar embeddings at depth 3
-        cmpRes, err = nh.Kademlia.Node().D3DB.FindSimilar(request.QueryEmbed, request.Threshold, request.ResultsCount)
+        cmpRes, err = nh.Kademlia.Node().D3DB.FindSimilar(request.FileEmbed, request.Threshold, request.ResultsCount)
         if err != nil {
             log.Printf("[StoreHandler] Error in FindSimilar D3DB: %v", err)
             return nil
@@ -329,7 +328,7 @@ func (nh *NetworkHandler) StoreHandler(params []byte, body map[string]any) []byt
         
     case 3:
         // Search D4DB for nodes that have similar embeddings at depth 4
-        cmpRes, err = nh.Kademlia.Node().D4DB.FindSimilar(request.QueryEmbed, request.Threshold, request.ResultsCount)
+        cmpRes, err = nh.Kademlia.Node().D4DB.FindSimilar(request.FileEmbed, request.Threshold, request.ResultsCount)
         if err != nil {
             log.Printf("[StoreHandler] Error in FindSimilar D4DB: %v", err)
             return nil
@@ -347,10 +346,10 @@ func (nh *NetworkHandler) StoreHandler(params []byte, body map[string]any) []byt
         
         // Hash the query embedding to determine which node should store it
         h := sha256.New()
-        embedBytes, _ := json.Marshal(request.QueryEmbed)
+        embedBytes, _ := json.Marshal(request.FileEmbed)
         h.Write(embedBytes)
         embedBytes = embedBytes[:20]
-        
+
         // Find the closest node in the routing table based on the hash
         // This creates a deterministic mapping from embeddings to nodes
         closestNodes := nh.Kademlia.Node().RoutingTable().FindClosest(embedBytes, 1)
@@ -361,7 +360,7 @@ func (nh *NetworkHandler) StoreHandler(params []byte, body map[string]any) []byt
         switch request.Depth {
         case 1:
             // Store the embedding in D2DB to indicate this node handles depth 2 queries for this embedding cluster
-            err = nh.Kademlia.Node().D2DB.StoreNodeEmbedding(closestNode.NodeID, closestNode.PeerID, request.QueryEmbed)
+            err = nh.Kademlia.Node().D2DB.StoreNodeEmbedding(closestNode.NodeID, closestNode.PeerID, request.FileEmbed)
             if err != nil {
                 log.Printf("[StoreHandler] Error storing in D2DB: %v", err)
                 return nil
@@ -371,7 +370,7 @@ func (nh *NetworkHandler) StoreHandler(params []byte, body map[string]any) []byt
 
         case 2:
             // Store the embedding in D3DB to indicate this node handles depth 3 queries for this embedding cluster
-            err = nh.Kademlia.Node().D3DB.StoreNodeEmbedding(closestNode.NodeID, closestNode.PeerID, request.QueryEmbed)
+            err = nh.Kademlia.Node().D3DB.StoreNodeEmbedding(closestNode.NodeID, closestNode.PeerID, request.FileEmbed)
             if err != nil {
                 log.Printf("[StoreHandler] Error storing in D3DB: %v", err)
                 return nil   
@@ -381,7 +380,7 @@ func (nh *NetworkHandler) StoreHandler(params []byte, body map[string]any) []byt
         
         case 3:
             // Store the embedding in D4DB to indicate this node handles depth 4 queries for this embedding cluster
-            err = nh.Kademlia.Node().D4DB.StoreNodeEmbedding(closestNode.NodeID, closestNode.PeerID, request.QueryEmbed)
+            err = nh.Kademlia.Node().D4DB.StoreNodeEmbedding(closestNode.NodeID, closestNode.PeerID, request.FileEmbed)
             if err != nil {
                 log.Printf("[StoreHandler] Error storing in D4DB: %v", err)
                 return nil
@@ -404,7 +403,6 @@ func (nh *NetworkHandler) StoreHandler(params []byte, body map[string]any) []byt
             FileEmbed:    request.FileEmbed,
             SourceNodeID: hex.EncodeToString(nh.Kademlia.Node().NodeID),
             SourcePeerID: nh.Kademlia.Node().PeerID,
-            QueryEmbed: request.QueryEmbed,
         }
             
         respJSON, err := json.Marshal(response)
@@ -431,7 +429,6 @@ func (nh *NetworkHandler) StoreHandler(params []byte, body map[string]any) []byt
         NextNodeID:   hex.EncodeToString(bestRes.NodeID),
         Found:        false,
         Pruned:       false,
-        QueryEmbed: request.QueryEmbed,
         FileEmbed: request.FileEmbed,
     }
         

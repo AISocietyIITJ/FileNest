@@ -1,12 +1,12 @@
 package models
 
 import (
-    "encoding/json"
-    "final/backend/pkg/types"
+	"encoding/json"
+	"final/backend/pkg/types"
 
-    "github.com/libp2p/go-libp2p/core/host"
-    "github.com/libp2p/go-libp2p/core/peer"
-    "github.com/multiformats/go-multiaddr"
+	"github.com/libp2p/go-libp2p/core/host"
+	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/multiformats/go-multiaddr"
 )
 
 type UserPeer struct {
@@ -31,7 +31,6 @@ type EmbeddingStoreRequest struct {
     ReceiverPeerID string    `json:"receiver_peer_id,omitempty"`
     FileEmbed      []float64 `json:"file_embed,omitempty"`
     FilePath       string    `json:"file_path,omitempty"`
-    QueryEmbed     []float64 `json:"query_embed,omitempty"`
     Depth          int       `json:"depth,omitempty"`
     Threshold      float64   `json:"threshold,omitempty"`
     ResultsCount   int       `json:"results_count,omitempty"`
@@ -41,7 +40,6 @@ type EmbeddingStoreRequest struct {
 
 type EmbeddingStoreResponse struct {
     Message      string    `json:"message,omitempty"`
-    QueryEmbed   []float64 `json:"query_embed,omitempty"`
     FileEmbed    []float64 `json:"file_embed,omitempty"`
     Depth        int       `json:"depth,omitempty"`
     SourceNodeID string    `json:"source_node_id,omitempty"`
