@@ -100,7 +100,7 @@ func main() {
 
 	// Only depth peer goes to mongo
 	if *ptype == "depth" {
-		embed := []float64{0.1, 0.2, 0.3, 0.5, 1}
+		embed := []float64{0.1,0.2,0.3,0.5,1}
 		if err = relayhelper.UpsertNode(decSelfNodeID, p.Host.ID().String(), embed); err != nil {
 			log.Printf("Error in upserting node to mongo: %v \n", err.Error())
 		} else {
