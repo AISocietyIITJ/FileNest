@@ -100,7 +100,7 @@ func main() {
 
 	// Only depth peer goes to mongo
 	if *ptype == "depth" {
-		embed := []float64{0.1,0.2,0.3,0.5,1}
+		embed := []float64{0.1, 0.2, 0.3, 0.5, 1}
 		if err = relayhelper.UpsertNode(decSelfNodeID, p.Host.ID().String(), embed); err != nil {
 			log.Printf("Error in upserting node to mongo: %v \n", err.Error())
 		} else {
@@ -285,13 +285,13 @@ func handleFindValueUser(p *models.UserPeer, ctx context.Context, kademliaHandle
 }
 
 func handleStoreUser(p *models.UserPeer, ctx context.Context, kademliaHandler *integration.ComprehensiveKademliaHandler) {
-	log.Println("🔍 Starting find value process...")
-	query_embedding := []float64{0.15, 0.25, 0.35, 0.45, 0.55}
-	// test_filepath := "home/ma/chudao/kys"
+	log.Println("🔍 Starting store process...")
+	file_embedding := []float64{0.15, 0.25, 0.35, 0.45, 0.55}
+	test_filepath := "home/ma/chudao/kys"
 	threshold := 0.4
 
 	// Find Depth 1 nodes
-	targets, err := kademliaHandler.Node().FindSimilar(query_embedding, threshold, 10)
+	targets, err := kademliaHandler.Node().FindSimilar(file_embedding, threshold, 10)
 	if err != nil {
 		log.Printf("Error finding a representative node ID: %v", err)
 		return
@@ -323,14 +323,15 @@ func handleStoreUser(p *models.UserPeer, ctx context.Context, kademliaHandler *i
 			log.Printf("Store attempt at depth %d for NodeID: %s", depth, currentNodeID)
 
 			// Build request for current target
-			params := models.EmbeddingSearchRequest{
+			params := models.EmbeddingStoreRequest{
 				Type:           "POST",
 				Route:          "store",
 				SourceNodeID:   hex.EncodeToString(kademliaHandler.Node().NodeID),
 				SourcePeerID:   kademliaHandler.Node().PeerID,
 				TargetNodeID:   currentNodeID,
 				ReceiverPeerID: currentPeerInfo.PeerID,
-				QueryEmbed:     query_embedding,
+				FileEmbed:      file_embedding,
+				FilePath:       test_filepath,
 				Depth:          depth,
 				Found:          false,
 				Threshold:      threshold,
